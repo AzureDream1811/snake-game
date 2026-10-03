@@ -23,6 +23,23 @@ The game contains **6 progressive levels**, with each level introducing new game
 
 The base version of the game.
 
+**Need**
+
+* Snake
+* Food
+* Board
+* Score
+* Game Over
+* Restart
+
+**Rules**
+
+* Snake continuously moving 
+* Check if food is eaten 
+* If eat: score+, length+, new food 
+* Check collision  
+* Collide with wall or body -> Game over
+
 **Gameplay:**
 
 * Control the Snake using the keyboard.
