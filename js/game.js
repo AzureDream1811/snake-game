@@ -1,6 +1,6 @@
 const board = document.getElementById("game-board");
 
-const cellSize = 10;
+const cellSize = 20;
 const width = 20;
 const height = 20;
 
