@@ -2,20 +2,24 @@
 
 A classic Snake game built entirely with **HTML, CSS, and Vanilla JavaScript**.
 
-The game contains **6 progressive levels**, with each level introducing new gameplay mechanics and gradually increasing the difficulty.
+The game consists of **6 progressive levels**. Each level introduces new gameplay logic and gradually increases the complexity of the game.
 
 ## Features
 
 * Classic Snake gameplay
 * 6 progressive levels
-* Increasing difficulty
+* Keyboard controls
 * Score system
 * Collision detection
-* Different types of food
-* Temporary gameplay effects
+* Dynamic game speed
+* Wrap-around map behavior
 * Static and moving obstacles
-* Portal teleportation
-* Level progression
+* Multiple food types
+* Temporary gameplay effects
+* Score multiplier
+* Dynamic map
+* Enemy Snake AI
+* Game Over and restart system
 
 ## Levels
 
@@ -23,175 +27,239 @@ The game contains **6 progressive levels**, with each level introducing new game
 
 The base version of the game.
 
-**Need**
+**Core mechanics:**
 
-* Snake
-* Food
-* Board
-* Score
+* Snake movement
+* Keyboard controls
+* Food spawning
+* Snake growth
+* Score system
+* Wall collision
+* Self collision
 * Game Over
 * Restart
 
-**Rules**
-
-* Snake continuously moving 
-* Check if food is eaten 
-* If eat: score+, length+, new food 
-* Check collision  
-* Collide with wall or body -> Game over
-
-**Gameplay:**
-
-* Control the Snake using the keyboard.
-* Eat food to increase the Snake's length.
-* Gain points from eating food.
-* The game ends when the Snake hits the wall or itself.
-
-**New mechanics:** None
+This level establishes the core game loop, game state, rendering, input handling, and collision system used by the following levels.
 
 ---
 
-### Level 2 — Speed Up
+### Level 2 — Speed and Wrap-around
 
-Introduces a speed progression mechanic.
+Introduces two new mechanics.
 
-**New mechanic:**
+#### 1. Dynamic Speed
 
-* The Snake becomes faster as the score increases.
-* Higher scores require faster reaction times.
+The Snake becomes faster as the game progresses.
+
+Speed can increase based on score or the number of food items collected.
 
 Example:
 
 ```text
-Score 0   → Normal Speed
-Score 5   → Faster
-Score 10  → Very Fast
-Score 15  → Extreme Speed
+Score 0   → 200ms
+Score 5   → 180ms
+Score 10  → 160ms
+Score 15  → 140ms
 ```
 
-**New mechanics:** 1
+#### 2. Wrap-around
 
-* Speed progression
+Instead of causing Game Over, crossing one edge of the map moves the Snake to the opposite side.
+
+```text
+Right edge → Left edge
+Left edge  → Right edge
+Top edge   → Bottom edge
+Bottom edge → Top edge
+```
+
+**New mechanics:** 2
+
+* Dynamic speed
+* Wrap-around movement
 
 ---
 
-### Level 3 — Obstacles
+### Level 3 — Obstacles and Special Food
 
-Introduces static obstacles on the game board.
+Introduces two new mechanics.
 
-**New mechanic:**
+#### 1. Static Obstacles
 
-* Obstacles are placed at different locations.
-* The Snake must avoid them.
-* Hitting an obstacle results in Game Over.
+Static obstacles are placed on the game board.
 
-The Snake can collide with:
+The Snake must avoid:
 
 * Walls
 * Its own body
 * Obstacles
 
-**New mechanics:** 1
+Collision with an obstacle causes Game Over.
 
-* Static obstacles
+#### 2. Special Food
 
----
+Different types of food provide different effects.
 
-### Level 4 — Special Food
-
-Introduces different types of food with unique effects.
-
-#### Normal Food
+Example:
 
 ```text
+Normal Food
 +10 Score
-+1 Snake Length
-```
++1 Length
 
-#### Speed Food
-
-Temporarily increases Snake speed.
-
-```text
-Effect Duration: 5 seconds
-```
-
-#### Slow Food
-
-Temporarily decreases Snake speed.
-
-```text
-Effect Duration: 5 seconds
-```
-
-#### Bonus Food
-
-Provides additional score.
-
-```text
+Bonus Food
 +50 Score
+
+Poison Food
+Decrease Snake Length
 ```
 
+Each food type has its own behavior and effect.
+
 **New mechanics:** 2
 
-* Special food
-* Temporary effects
-
----
-
-### Level 5 — Moving Obstacles
-
-Introduces moving obstacles while keeping the mechanics from Level 4.
-
-**New mechanics:**
-
-* Some obstacles move automatically.
-* The Snake must avoid both static and moving obstacles.
-* Moving obstacles create additional collision challenges.
-
-The level combines:
-
-* Speed progression
 * Static obstacles
 * Special food
-* Temporary effects
-* Moving obstacles
-
-**New mechanics:** 2
-
-* Moving obstacles
-* Dynamic collision detection
 
 ---
 
-### Level 6 — Portal
+### Level 4 — Dynamic Obstacles and Effects
 
-The final level combines the previous mechanics and introduces portals.
+Introduces three new mechanics.
 
-**New mechanic:**
+#### 1. Moving Obstacles
 
-When the Snake enters a portal, it is teleported to another portal.
+Some obstacles move automatically across the map.
+
+The Snake must continuously adapt to changing obstacle positions.
+
+#### 2. Temporary Food Effects
+
+Some food applies an effect for a limited amount of time.
+
+Example:
 
 ```text
-Portal A → Portal B
+Speed Boost
+Duration: 5 seconds
+
+Slow
+Duration: 3 seconds
 ```
 
-A short cooldown can be applied to prevent continuous teleportation.
+Effects automatically expire after their duration ends.
 
-The final level combines:
+#### 3. Score Multiplier
 
-* Increasing Snake speed
-* Static obstacles
-* Special food
-* Temporary effects
-* Moving obstacles
-* Portal teleportation
+The player can activate a score multiplier.
+
+Example:
+
+```text
+Normal:
+10 × 1 = 10
+
+Multiplier:
+10 × 3 = 30
+```
+
+The final score is calculated based on the base food value and the current multiplier.
 
 **New mechanics:** 3
 
-* Special food
 * Moving obstacles
-* Portal teleportation
+* Temporary effects
+* Score multiplier
+
+---
+
+### Level 5 — Dynamic Map
+
+Introduces one complex mechanic: **Dynamic Map**.
+
+The map changes while the game is running.
+
+Possible changes include:
+
+* Obstacles appearing
+* Obstacles disappearing
+* Obstacles changing position
+* Paths becoming blocked
+* Paths becoming available
+
+Example:
+
+```text
+Initial State
+
+┌────────────────────┐
+│                    │
+│      ████          │
+│                    │
+│        Snake       │
+│                    │
+└────────────────────┘
+```
+
+Later:
+
+```text
+Updated State
+
+┌────────────────────┐
+│                    │
+│      ████          │
+│                    │
+│        Snake   ███ │
+│                    │
+└────────────────────┘
+```
+
+The collision system must always use the current state of the map.
+
+**New mechanics:** 1 complex mechanic
+
+* Dynamic map transformation
+
+---
+
+### Level 6 — Enemy Snake AI
+
+Introduces one complex mechanic: **Enemy Snake AI**.
+
+An AI-controlled Snake is added to the game.
+
+The Enemy Snake can:
+
+* Move independently
+* Select a target
+* Navigate through the game board
+* Avoid obstacles
+* Interact with food
+* Interact with the player's Snake
+
+A simple version can prioritize reaching food:
+
+```text
+Food
+  ↓
+Find path
+  ↓
+Move toward target
+```
+
+A more advanced version can allow the Enemy Snake to make decisions based on the player's position.
+
+Possible pathfinding algorithms include:
+
+* Breadth-First Search (BFS)
+* Other grid-based pathfinding approaches
+
+**New mechanics:** 1 complex mechanic
+
+* Enemy Snake AI
+
+---
 
 ## Level Progression
 
@@ -201,26 +269,27 @@ Classic Snake
     |
     v
 Level 2
-+ Speed Up
++ Dynamic Speed
++ Wrap-around
     |
     v
 Level 3
 + Static Obstacles
++ Special Food
     |
     v
 Level 4
-+ Special Food
++ Moving Obstacles
 + Temporary Effects
++ Score Multiplier
     |
     v
 Level 5
-+ Moving Obstacles
-+ Dynamic Collision
++ Dynamic Map
     |
     v
 Level 6
-+ Portal
-+ Previous Mechanics
++ Enemy Snake AI
 ```
 
 ## Technologies
@@ -229,7 +298,7 @@ Level 6
 * CSS3
 * Vanilla JavaScript
 
-No frameworks or external game engines are used.
+No frameworks, game engines, or backend services are required.
 
 ## Project Structure
 
@@ -243,11 +312,14 @@ snake-game/
 │   ├── snake.js
 │   ├── food.js
 │   ├── obstacle.js
+│   ├── input.js
 │   └── level.js
 ├── assets/
 │   └── ...
 └── README.md
 ```
+
+The structure may evolve as the game becomes more complex.
 
 ## Getting Started
 
@@ -269,32 +341,37 @@ No build tools or dependencies are required.
 
 ## Project Goals
 
-This project is created to practice:
+This project is primarily created to practice JavaScript and game development fundamentals, including:
 
-* JavaScript fundamentals
-* DOM manipulation
+* JavaScript syntax and data structures
+* Arrays and objects
+* Functions
 * Event handling
+* DOM and Canvas API
 * Game loops
-* Collision detection
 * State management
+* Collision detection
+* Coordinate systems
 * Timers and intervals
-* Object-oriented game design
-* Progressive game difficulty
+* Randomization
+* Dynamic game mechanics
+* Pathfinding and basic AI
 
-## Future Improvements
+## Development Approach
 
-Possible future additions:
+The game is developed incrementally.
 
-* Sound effects
-* Background music
-* High-score system
-* Pause and resume
-* Multiple game modes
-* Responsive mobile controls
-* Local Storage for saving progress
-* Leaderboard
-* Custom Snake skins
-* Additional levels
+Each level is implemented and tested before introducing the mechanics of the next level.
+
+The main priority is:
+
+1. Correct game logic
+2. Reliable state management
+3. Clean and maintainable code
+4. Testable game mechanics
+5. Visual improvements
+
+The visual design is intentionally kept simple so that development can focus on gameplay logic and JavaScript implementation.
 
 ## License
 
