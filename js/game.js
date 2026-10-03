@@ -1,6 +1,6 @@
 const board = document.getElementById("game-board");
 
-const cellSize = 20;
+const cellSize = 10;
 const width = 20;
 const height = 20;
 
@@ -96,8 +96,6 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-const timer = setInterval(tick, 350);
-
 function isGameOver() {
   const head = snake[0];
 
@@ -111,12 +109,34 @@ function isGameOver() {
   return hitWall || hitSelf;
 }
 
+let timer;
+
+function resetGame() {
+  snake.length = 0;
+  snake.push({ x: 5, y: 5 }, { x: 4, y: 5 }, { x: 3, y: 5 });
+  direction = right;
+  score = 0;
+  pointsEl.textContent = 0;
+  food = spawnFood();
+}
+
+let tickms = 300
+
+function startGame() {
+  resetGame();
+  draw(ctx);
+  timer = setInterval(tick, tickms);
+}
+
 function tick() {
   moveSnake(direction);
   if (isGameOver()) {
     clearInterval(timer);
     alert("Game Over!");
+    startGame();
     return;
   }
   draw(ctx);
 }
+
+startGame();
