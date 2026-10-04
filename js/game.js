@@ -1,3 +1,26 @@
+const levels = {
+  1: { winScore: 10, baseTickMs: 300, speedSteps: [1, 1.25, 1.5, 2] },
+  2: { winScore: 15, baseTickMs: 250, speedSteps: [1, 1.25, 1.5, 2] },
+};
+
+let currentLevel = 1;
+
+const levelSelect = document.getElementById("level-select");
+
+Object.keys(levels).forEach((key) => {
+  const option = document.createElement("option");
+  option.value = key;
+  option.textContent = `Level ${key}`;
+  levelSelect.appendChild(option);
+});
+
+levelSelect.addEventListener("change", () => {
+  currentLevel = Number(levelSelect.value);
+  levelSelect.blur();
+  startGame();
+});
+
+
 const board = document.getElementById("game-board");
 
 const cellSize = 20;
@@ -71,7 +94,8 @@ function moveSnake(direction) {
   }
 }
 
-function updateScoreDisplay(){
+
+function updateScoreDisplay() {
   scoresEL.textContent = `Score: ${score}/${winScore}`;
 }
 
@@ -118,7 +142,24 @@ function isGameWin() {
   return score >= winScore;
 }
 
+let baseTickMs = 300;
+const speedEl = document.getElementById("speed-up");
+let speedSteps = [1, 1.25, 1.5, 2];
+
+function getSpeed() {
+  const index = Math.min(Math.floor(score / 3), speedSteps.length - 1);
+  return speedSteps[index];
+}
+
+function updateSpeedDisplay() {
+  speedEl.textContent = `Speed: ${getSpeed().toFixed(2)}x`;
+}
+
 let timer;
+
+function scheduleTick() {
+  timer = setTimeout(tick, baseTickMs / getSpeed());
+}
 
 function resetGame() {
   snake.length = 0;
@@ -129,26 +170,17 @@ function resetGame() {
   food = spawnFood();
 }
 
-let baseTickMs = 300;
-const speedEl = document.getElementById("speed-up");
-
-function getSpeed() {
-  if (score < 3) return 1;
-  if (score < 6) return 1.25;
-  if (score < 9) return 1.5;
-  return 2;
-}
-
-function updateSpeedDisplay() {
-  speedEl.textContent = `Speed: ${getSpeed().toFixed(2)}x`;
-}
-
-function scheduleTick() {
-  timer = setTimeout(tick, baseTickMs / getSpeed());
+function loadLevel(level) {
+  const config = levels[level];
+  currentLevel = level;
+  winScore = config.winScore;
+  baseTickMs = config.baseTickMs;
+  speedSteps = config.speedSteps;
 }
 
 function startGame() {
   clearTimeout(timer);
+  loadLevel(currentLevel);
   resetGame();
   draw(ctx);
   updateSpeedDisplay();
