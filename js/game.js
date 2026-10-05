@@ -25,14 +25,14 @@ const levels = {
       },
       {
         text: "Collect 5 food",
-        check: () => score >= 5,
+        check: () => foodEaten >= 5,
         reward: () => {
           score += 5;
         },
       },
       {
         text: "Collect 8 food",
-        check: () => score >= 8,
+        check: () => foodEaten >= 8,
         reward: () => {
           addEffect("speed", 3000);
         },
@@ -58,11 +58,12 @@ const levels = {
 const board = document.getElementById("game-board");
 const ctx = board.getContext("2d");
 const levelSelect = document.getElementById("level-select");
+const foodEl = document.getElementById("food");
 const scoresEL = document.getElementById("scores");
 const speedEl = document.getElementById("speed-up");
 const missionsEl = document.getElementById("missions");
 const tickCountEl = document.getElementById("tick-count");
-const effectEl = document.getElementById("effect");
+const effectEl = document.getElementById("effects");
 
 const cellSize = 20;
 const width = 20;
@@ -82,6 +83,7 @@ let direction = right;
 let score = 0;
 let timer;
 let tickCount = 0;
+let foodEaten = 0;
 
 let currentLevel = 1;
 let winScore = 10;
@@ -93,7 +95,7 @@ let obstacles = [];
 let missionCount = 0;
 let missionPool = [];
 let missions = [];
-let effect = [];
+let effects = [];
 
 function isOccupied(pos) {
   return (
@@ -132,7 +134,7 @@ function moveSnake(direction) {
   if (newHead.x === food.x && newHead.y === food.y) {
     food = spawnRandom();
     score++;
-    updateScoreDisplay();
+    foodEaten++;
   } else {
     snake.pop();
   }
@@ -160,7 +162,7 @@ function isGameWin() {
 }
 
 function getSpeed() {
-  const index = Math.min(Math.floor(score / 3), speedSteps.length - 1);
+  const index = Math.min(Math.floor(foodEaten / 3), speedSteps.length - 1);
   let speed = speedSteps[index];
   if (hasEffect("speed")) {
     speed *= 1.5;
@@ -169,6 +171,10 @@ function getSpeed() {
     speed *= 0.5;
   }
   return speed;
+}
+
+function updateFoodDisplay() {
+  foodEl.textContent = `Food eaten: ${foodEaten}`;
 }
 
 function updateScoreDisplay() {
@@ -184,7 +190,7 @@ function updateTickCountDisplay() {
 }
 
 function updateEffectDisplay() {
-  const activeEffects = effect
+  const activeEffects = effects
     .filter((e) => e.endsAt > Date.now())
     .map((e) => e.type)
     .join(", ");
@@ -201,10 +207,12 @@ function updateMissionDisplay() {
 }
 
 function updateDisplays() {
+  updateFoodDisplay();
   updateScoreDisplay();
   updateSpeedDisplay();
   updateTickCountDisplay();
   updateMissionDisplay();
+  updateEffectDisplay();
 }
 
 function drawFood(ctx, food) {
@@ -270,15 +278,15 @@ function updateMissions() {
 }
 
 function addEffect(type, durationMs) {
-  effect.push({ type, endsAt: Date.now() + durationMs });
+  effects.push({ type, endsAt: Date.now() + durationMs });
 }
 
 function hasEffect(type) {
-  return effect.some((e) => e.type === type && e.endsAt > Date.now());
+  return effects.some((e) => e.type === type && e.endsAt > Date.now());
 }
 
 function cleanupEffects() {
-  effect = effect.filter((e) => e.endsAt > Date.now());
+  effects = effects.filter((e) => e.endsAt > Date.now());
 }
 
 function scheduleTick() {
@@ -302,7 +310,9 @@ function resetGame() {
   snake.push({ x: 5, y: 5 }, { x: 4, y: 5 }, { x: 3, y: 5 });
   direction = right;
   score = 0;
+  foodEaten = 0;
   tickCount = 0;
+  food = undefined;
 
   obstacles = [];
   for (let i = 0; i < obstacleCount; i++) {
@@ -311,7 +321,7 @@ function resetGame() {
 
   food = spawnRandom();
   missions = pickMissions();
-  effect = [];
+  effects = [];
 }
 
 function startGame() {
