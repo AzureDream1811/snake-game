@@ -7,6 +7,7 @@ const levels = {
     obstacleCount: 0,
     missionCount: 0,
     missionPool: [],
+    showEffects: false,
   },
   2: {
     winScore: 30,
@@ -52,6 +53,7 @@ const levels = {
         },
       },
     ],
+    showEffects: true,
   },
 };
 
@@ -190,6 +192,9 @@ function updateTickCountDisplay() {
 }
 
 function updateEffectDisplay() {
+  effectEl.hidden = !showEffects;
+  if (!showEffects) return;
+
   const activeEffects = effects
     .filter((e) => e.endsAt > Date.now())
     .map((e) => e.type)
@@ -303,6 +308,7 @@ function loadLevel(level) {
   obstacleCount = config.obstacleCount;
   missionCount = config.missionCount;
   missionPool = config.missionPool;
+  showEffects = config.showEffects;
 }
 
 function resetGame() {
