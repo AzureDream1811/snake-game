@@ -71,8 +71,12 @@ const MISSIONS = {
 };
 
 const SPECIAL_FOOD = {
-  slow: () => addEffect("slow", 5000),
-  speed: () => addEffect("speed", 5000),
+  slow: () => {
+    (addEffect("slow", 5000), (score -= 1));
+  },
+  speed: () => {
+    (addEffect("speed", 5000), (score += 2));
+  },
   extraFood: () => {
     score += 5;
   },
@@ -107,6 +111,7 @@ let score = 0;
 let timer;
 let tickCount = 0;
 let foodEaten = 0;
+let foodDurationMs = 10000;
 
 let currentLevel = 1;
 let winScore = 10;
@@ -134,7 +139,7 @@ function isOccupied(pos) {
   );
 }
 
-function spawnRandom() {
+function spawnRandom(durationMs) {
   let pos;
   do {
     pos = {
@@ -142,6 +147,13 @@ function spawnRandom() {
       y: Math.floor(Math.random() * height),
     };
   } while (isOccupied(pos));
+
+  setTimeout(() => {
+    if (food && food.x === pos.x && food.y === pos.y) {
+      food = null;
+    }
+  }, durationMs);
+
   return pos;
 }
 
@@ -159,7 +171,7 @@ function moveSnake(direction) {
   snake.unshift(newHead);
 
   if (newHead.x === food.x && newHead.y === food.y) {
-    food = spawnRandom();
+    food = spawnRandom(foodDurationMs);
     score++;
     foodEaten++;
   } else {
@@ -331,22 +343,6 @@ function loadLevel(level) {
   speedSteps = config.speedSteps;
   wrap = config.wrap;
   obstacleCount = config.obstacleCount;
-  missionCount = config.missionCount;
-  missionPool = config.missionPool;
-  specialFood = config.specialFood;
-  hasTimeLimit = config.hasTimeLimit;
-  timeLimit = config.timeLimit;
-  showEffects = config.showEffects;
-}
-
-function loadLevel(level) {
-  const config = levels[level];
-  currentLevel = level;
-  winScore = config.winScore;
-  baseTickMs = config.baseTickMs;
-  speedSteps = config.speedSteps;
-  wrap = config.wrap;
-  obstacleCount = config.obstacleCount;
 
   missionPool = config.missionIds.map((id) => MISSIONS[id]);
   missionCount = config.missionCount;
@@ -368,10 +364,9 @@ function resetGame() {
 
   obstacles = [];
   for (let i = 0; i < obstacleCount; i++) {
-    obstacles.push(spawnRandom());
+    obstacles.push(spawnRandom(9999999));
   }
-
-  food = spawnRandom();
+  food = spawnRandom(foodDurationMs);
   missions = pickMissions();
   effects = [];
 }
@@ -387,6 +382,9 @@ function startGame() {
 
 function tick() {
   tickCount++;
+  if (!food) {
+    food = spawnRandom(foodDurationMs);
+  }
   moveSnake(direction);
 
   if (isGameOver()) {
@@ -404,6 +402,7 @@ function tick() {
   }
 
   draw(ctx);
+
   updateDisplays();
   cleanupEffects();
   scheduleTick();
