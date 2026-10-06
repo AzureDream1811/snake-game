@@ -5,6 +5,7 @@ const DEFAULT_LEVEL = {
   wrap: false,
   obstacleCount: 0,
   missionIds: [],
+  missionCount: 0,
   showEffects: false,
   specialFoodTypes: [],
   hasTimeLimit: false,
@@ -20,6 +21,7 @@ const levels = {
     wrap: true,
     obstacleCount: 3,
     missionIds: ["len8", "food5", "food8", "len12", "survive100"],
+    missionCount: 3,
     showEffects: true,
   },
   3: {
@@ -347,7 +349,7 @@ function loadLevel(level) {
   obstacleCount = config.obstacleCount;
 
   missionPool = config.missionIds.map((id) => MISSIONS[id]);
-  missionCount = missionPool.length;
+  missionCount = config.missionCount;
 
   specialFood = config.specialFoodTypes;
   hasTimeLimit = config.hasTimeLimit;
