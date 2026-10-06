@@ -26,11 +26,14 @@ const levels = {
   },
   3: {
     ...DEFAULT_LEVEL,
+    baseTickMs: 200,
+    speedSteps: [1, 1.5, 2, 3],
     winScore: 50,
     wrap: true,
     obstacleCount: 5,
     showEffects: true,
-    specialFoodTypes: ["slow", "speed", "extraFood"],
+    specialFoodTypes: ["slow", "speed", "extraFood", "extraTime"],
+    foodCount: 2,
     hasTimeLimit: true,
     timeLimit: 120000,
   },
@@ -101,6 +104,13 @@ const FOOD_TYPES = {
       foodEaten++;
     },
   },
+  extraTime: {
+    color: "#2ECC71",
+    effect: () => {
+      timeRemainingMs += 10000;
+      foodEaten++;
+    },
+  },
 };
 
 const board = document.getElementById("game-board");
@@ -127,13 +137,14 @@ const up = { x: 0, y: -1 };
 const down = { x: 0, y: 1 };
 
 const snake = [];
-let food;
+let foods = [];
 let direction = right;
 let score = 0;
 let timer;
 let tickCount = 0;
 let foodEaten = 0;
 let foodDurationMs = 10000;
+let foodCount = 1;
 
 let currentLevel = 1;
 let winScore = 10;
@@ -150,17 +161,14 @@ let specialFood = [];
 let hasTimeLimit = false;
 let timeLimit = 0;
 let showEffects = false;
-let levelStartTime;
-let elapsed = 0;
-
+let timeRemainingMs = 0;
+let lastTickTime = 0;
 
 function isOccupied(pos) {
   return (
-    snake.some((segment) => segment.x === pos.x && segment.y === pos.y) ||
-    obstacles.some(
-      (obstacle) => obstacle.x === pos.x && obstacle.y === pos.y,
-    ) ||
-    (food && food.x === pos.x && food.y === pos.y)
+    snake.some((s) => s.x === pos.x && s.y === pos.y) ||
+    obstacles.some((o) => o.x === pos.x && o.y === pos.y) ||
+    foods.some((f) => f.x === pos.x && f.y === pos.y)
   );
 }
 
@@ -178,8 +186,21 @@ function spawnRandom(durationMs) {
 
   if (Number.isFinite(durationMs)) {
     setTimeout(() => {
-      if (food && food.x === result.x && food.y === result.y) food = null;
+      const index = foods.findIndex(
+        (f) => f.x === result.x && f.y === result.y,
+      );
+      if (index !== -1) {
+        foods.splice(index, 1, spawnRandom(durationMs));
+      }
     }, durationMs);
+  }
+  return result;
+}
+
+function spawnFoods(count, durationMs) {
+  const result = [];
+  for (let i = 0; i < count; i++) {
+    result.push(spawnRandom(durationMs));
   }
   return result;
 }
@@ -206,9 +227,14 @@ function moveSnake(direction) {
   }
 
   snake.unshift(newHead);
-  if (newHead.x === food.x && newHead.y === food.y) {
-    FOOD_TYPES[food.type].effect();
-    food = spawnRandom(foodDurationMs);
+
+  const eatenIndex = foods.findIndex(
+    (f) => f.x === newHead.x && f.y === newHead.y,
+  );
+
+  if (eatenIndex !== -1) {
+    FOOD_TYPES[foods[eatenIndex].type].effect();
+    foods.splice(eatenIndex, 1, spawnRandom(foodDurationMs));
   } else {
     snake.pop();
   }
@@ -228,7 +254,7 @@ function isGameOver() {
     (obstacle) => obstacle.x === head.x && obstacle.y === head.y,
   );
 
-  if (hasTimeLimit && timeRemaining(elapsed) <= 0) {
+  if (hasTimeLimit && timeRemainingMs <= 0) {
     return true;
   }
 
@@ -298,7 +324,7 @@ function updateTimeDisplay() {
     return;
   }
   timeEl.hidden = false;
-  timeEl.textContent = `Remaining: ${Math.ceil(timeRemaining(elapsed) / 1000)}s`;
+  timeEl.textContent = `Remaining: ${Math.ceil(Math.max(0, timeRemainingMs) / 1000)}s`;
 }
 
 function updateDisplays() {
@@ -311,9 +337,11 @@ function updateDisplays() {
   updateTimeDisplay();
 }
 
-function drawFood(ctx, food) {
-  ctx.fillStyle = FOOD_TYPES[food.type].color;
-  ctx.fillRect(food.x * cellSize, food.y * cellSize, cellSize, cellSize);
+function drawFood(ctx, foods) {
+  foods.forEach((f) => {
+    ctx.fillStyle = FOOD_TYPES[f.type].color;
+    ctx.fillRect(f.x * cellSize, f.y * cellSize, cellSize, cellSize);
+  });
 }
 
 function drawSnake(ctx) {
@@ -344,7 +372,7 @@ function draw(ctx) {
   ctx.fillStyle = "black";
   ctx.fillRect(0, 0, width * cellSize, height * cellSize);
   drawObstacles(ctx);
-  drawFood(ctx, food);
+  drawFood(ctx, foods);
   drawSnake(ctx);
 }
 
@@ -397,6 +425,7 @@ function loadLevel(level) {
   speedSteps = config.speedSteps;
   wrap = config.wrap;
   obstacleCount = config.obstacleCount;
+  foodCount = levels[currentLevel].foodCount || 1;
 
   missionPool = config.missionIds.map((id) => MISSIONS[id]);
   missionCount = config.missionCount;
@@ -405,6 +434,7 @@ function loadLevel(level) {
   hasTimeLimit = config.hasTimeLimit;
   timeLimit = config.timeLimit;
   showEffects = config.showEffects;
+
 }
 
 function resetGame() {
@@ -414,17 +444,17 @@ function resetGame() {
   score = 0;
   foodEaten = 0;
   tickCount = 0;
-  food = undefined;
+  foods = spawnFoods(foodCount, foodDurationMs);
 
   obstacles = [];
   for (let i = 0; i < obstacleCount; i++) {
     obstacles.push(spawnRandom(Infinity));
   }
-  food = spawnRandom(foodDurationMs);
+
   missions = pickMissions();
   effects = [];
-  levelStartTime = Date.now();
-  elapsed = 0;
+  timeRemainingMs = timeLimit;
+  lastTickTime = Date.now();
 }
 
 function startGame() {
@@ -438,11 +468,14 @@ function startGame() {
 
 function tick() {
   tickCount++;
-  elapsed = Date.now() - levelStartTime;
+  const now = Date.now();
+  const delta = now - lastTickTime;
+  lastTickTime = now;
 
-  if (!food) {
-    food = spawnRandom(foodDurationMs);
+  if (hasTimeLimit) {
+    timeRemainingMs -= delta;
   }
+
   moveSnake(direction);
 
   if (isGameOver()) {
