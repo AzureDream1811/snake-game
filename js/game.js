@@ -1,59 +1,119 @@
+const DEFAULT_LEVEL = {
+  gridWidth: 20,
+  gridHeight: 20,
+  winScore: 20,
+  baseTickMs: 300,
+  speedSteps: [1, 1.25, 1.5, 2],
+  wrap: false,
+  obstacleCount: 0,
+  missionIds: [],
+  missionCount: 0,
+  showEffects: false,
+  specialFoodTypes: [],
+  hasTimeLimit: false,
+  timeLimit: 0,
+};
+
 const levels = {
-  1: {
-    winScore: 10,
-    baseTickMs: 300,
-    speedSteps: [1, 1.25, 1.5, 2],
-    wrap: false,
-    obstacleCount: 0,
-    missionCount: 0,
-    missionPool: [],
-    showEffects: false,
-  },
+  1: { ...DEFAULT_LEVEL, winScore: 10 },
   2: {
+    ...DEFAULT_LEVEL,
     winScore: 30,
     baseTickMs: 250,
-    speedSteps: [1, 1.25, 1.5, 2],
     wrap: true,
     obstacleCount: 3,
+    missionIds: ["len8", "food5", "food8", "len12", "survive100"],
     missionCount: 3,
-    missionPool: [
-      {
-        text: "Reach length 8",
-        check: () => snake.length >= 8,
-        reward: () => {
-          addEffect("speed", 5000);
-        },
-      },
-      {
-        text: "Collect 5 food",
-        check: () => foodEaten >= 5,
-        reward: () => {
-          score += 5;
-        },
-      },
-      {
-        text: "Collect 8 food",
-        check: () => foodEaten >= 8,
-        reward: () => {
-          addEffect("speed", 3000);
-        },
-      },
-      {
-        text: "Reach length 12",
-        check: () => snake.length >= 12,
-        reward: () => {
-          score += 10;
-        },
-      },
-      {
-        text: "Survive 100 ticks",
-        check: () => tickCount >= 100,
-        reward: () => {
-          score += 2;
-        },
-      },
-    ],
     showEffects: true,
+  },
+  3: {
+    ...DEFAULT_LEVEL,
+    gridWidth: 30,
+    gridHeight: 30,
+    baseTickMs: 200,
+    speedSteps: [1, 1.5, 2, 3],
+    winScore: 50,
+    wrap: true,
+    obstacleCount: 5,
+    showEffects: true,
+    specialFoodTypes: ["slow", "speed", "extraFood", "extraTime"],
+    foodCount: 2,
+    hasTimeLimit: true,
+    timeLimit: 150000,
+  },
+};
+
+const MISSIONS = {
+  len8: {
+    text: "Reach length 8",
+    check: () => snake.length >= 8,
+    reward: () => addEffect("speed", 5000),
+  },
+  food5: {
+    text: "Collect 5 food",
+    check: () => foodEaten >= 5,
+    reward: () => {
+      score += 5;
+    },
+  },
+  food8: {
+    text: "Collect 8 food",
+    check: () => foodEaten >= 8,
+    reward: () => addEffect("speed", 3000),
+  },
+  len12: {
+    text: "Reach length 12",
+    check: () => snake.length >= 12,
+    reward: () => {
+      score += 10;
+    },
+  },
+  survive100: {
+    text: "Survive 100 ticks",
+    check: () => tickCount >= 100,
+    reward: () => {
+      score += 2;
+    },
+  },
+};
+
+const FOOD_TYPES = {
+  normal: {
+    color: "red",
+    effect: () => {
+      score++;
+      foodEaten++;
+    },
+  },
+  slow: {
+    color: "#5c00f1",
+    effect: () => {
+      addEffect("slow", 5000);
+      score -= 1;
+      foodEaten++;
+    },
+  },
+  speed: {
+    color: "#FFD23F",
+    effect: () => {
+      addEffect("speed", 5000);
+      score += 2;
+      foodEaten++;
+    },
+  },
+  extraFood: {
+    color: "#FF6B9D",
+    effect: () => {
+      score += 5;
+      foodEaten++;
+    },
+  },
+  extraTime: {
+    color: "#2ECC71",
+    effect: () => {
+      timeRemainingMs += 10000;
+      foodEaten++;
+    },
   },
 };
 
@@ -66,13 +126,11 @@ const speedEl = document.getElementById("speed-up");
 const missionsEl = document.getElementById("missions");
 const tickCountEl = document.getElementById("tick-count");
 const effectEl = document.getElementById("effects");
+const timeEl = document.getElementById("time");
 
 const cellSize = 20;
-const width = 20;
-const height = 20;
-
-board.width = width * cellSize;
-board.height = height * cellSize;
+let width = 20;
+let height = 20;
 
 const right = { x: 1, y: 0 };
 const left = { x: -1, y: 0 };
@@ -80,12 +138,14 @@ const up = { x: 0, y: -1 };
 const down = { x: 0, y: 1 };
 
 const snake = [];
-let food;
+let foods = [];
 let direction = right;
 let score = 0;
 let timer;
 let tickCount = 0;
 let foodEaten = 0;
+let foodDurationMs = 10000;
+let foodCount = 1;
 
 let currentLevel = 1;
 let winScore = 10;
@@ -98,18 +158,22 @@ let missionCount = 0;
 let missionPool = [];
 let missions = [];
 let effects = [];
+let specialFood = [];
+let hasTimeLimit = false;
+let timeLimit = 0;
+let showEffects = false;
+let timeRemainingMs = 0;
+let lastTickTime = 0;
 
 function isOccupied(pos) {
   return (
-    snake.some((segment) => segment.x === pos.x && segment.y === pos.y) ||
-    obstacles.some(
-      (obstacle) => obstacle.x === pos.x && obstacle.y === pos.y,
-    ) ||
-    (food && food.x === pos.x && food.y === pos.y)
+    snake.some((s) => s.x === pos.x && s.y === pos.y) ||
+    obstacles.some((o) => o.x === pos.x && o.y === pos.y) ||
+    foods.some((f) => f.x === pos.x && f.y === pos.y)
   );
 }
 
-function spawnRandom() {
+function spawnRandom(durationMs) {
   let pos;
   do {
     pos = {
@@ -117,7 +181,39 @@ function spawnRandom() {
       y: Math.floor(Math.random() * height),
     };
   } while (isOccupied(pos));
-  return pos;
+
+  const type = pickFoodType();
+  const result = { x: pos.x, y: pos.y, type };
+
+  if (Number.isFinite(durationMs)) {
+    setTimeout(() => {
+      const index = foods.findIndex(
+        (f) => f.x === result.x && f.y === result.y,
+      );
+      if (index !== -1) {
+        foods.splice(index, 1, spawnRandom(durationMs));
+      }
+    }, durationMs);
+  }
+  return result;
+}
+
+function spawnFoods(count, durationMs) {
+  const result = [];
+  for (let i = 0; i < count; i++) {
+    result.push(spawnRandom(durationMs));
+  }
+  return result;
+}
+
+function pickFoodType() {
+  if (specialFood.length === 0) return "normal";
+  const roll = Math.random();
+
+  if (roll < 0.7) return "normal";
+
+  const pool = specialFood;
+  return pool[Math.floor(Math.random() * pool.length)];
 }
 
 function moveSnake(direction) {
@@ -133,10 +229,13 @@ function moveSnake(direction) {
 
   snake.unshift(newHead);
 
-  if (newHead.x === food.x && newHead.y === food.y) {
-    food = spawnRandom();
-    score++;
-    foodEaten++;
+  const eatenIndex = foods.findIndex(
+    (f) => f.x === newHead.x && f.y === newHead.y,
+  );
+
+  if (eatenIndex !== -1) {
+    FOOD_TYPES[foods[eatenIndex].type].effect();
+    foods.splice(eatenIndex, 1, spawnRandom(foodDurationMs));
   } else {
     snake.pop();
   }
@@ -156,6 +255,10 @@ function isGameOver() {
     (obstacle) => obstacle.x === head.x && obstacle.y === head.y,
   );
 
+  if (hasTimeLimit && timeRemainingMs <= 0) {
+    return true;
+  }
+
   return hitWall || hitSelf || hitObstacle;
 }
 
@@ -173,6 +276,11 @@ function getSpeed() {
     speed *= 0.5;
   }
   return speed;
+}
+
+function timeRemaining(timeElapsed) {
+  if (!hasTimeLimit) return Infinity;
+  return Math.max(0, timeLimit - timeElapsed);
 }
 
 function updateFoodDisplay() {
@@ -211,6 +319,15 @@ function updateMissionDisplay() {
   });
 }
 
+function updateTimeDisplay() {
+  if (!hasTimeLimit) {
+    timeEl.hidden = true;
+    return;
+  }
+  timeEl.hidden = false;
+  timeEl.textContent = `Remaining: ${Math.ceil(Math.max(0, timeRemainingMs) / 1000)}s`;
+}
+
 function updateDisplays() {
   updateFoodDisplay();
   updateScoreDisplay();
@@ -218,11 +335,14 @@ function updateDisplays() {
   updateTickCountDisplay();
   updateMissionDisplay();
   updateEffectDisplay();
+  updateTimeDisplay();
 }
 
-function drawFood(ctx, food) {
-  ctx.fillStyle = "red";
-  ctx.fillRect(food.x * cellSize, food.y * cellSize, cellSize, cellSize);
+function drawFood(ctx, foods) {
+  foods.forEach((f) => {
+    ctx.fillStyle = FOOD_TYPES[f.type].color;
+    ctx.fillRect(f.x * cellSize, f.y * cellSize, cellSize, cellSize);
+  });
 }
 
 function drawSnake(ctx) {
@@ -253,7 +373,7 @@ function draw(ctx) {
   ctx.fillStyle = "black";
   ctx.fillRect(0, 0, width * cellSize, height * cellSize);
   drawObstacles(ctx);
-  drawFood(ctx, food);
+  drawFood(ctx, foods);
   drawSnake(ctx);
 }
 
@@ -301,13 +421,25 @@ function scheduleTick() {
 function loadLevel(level) {
   const config = levels[level];
   currentLevel = level;
+
+  width = config.gridWidth; 
+  height = config.gridHeight;
+  board.width = width * cellSize;
+  board.height = height * cellSize;
+
   winScore = config.winScore;
   baseTickMs = config.baseTickMs;
   speedSteps = config.speedSteps;
   wrap = config.wrap;
   obstacleCount = config.obstacleCount;
+  foodCount = levels[currentLevel].foodCount || 1;
+
+  missionPool = config.missionIds.map((id) => MISSIONS[id]);
   missionCount = config.missionCount;
-  missionPool = config.missionPool;
+
+  specialFood = config.specialFoodTypes;
+  hasTimeLimit = config.hasTimeLimit;
+  timeLimit = config.timeLimit;
   showEffects = config.showEffects;
 }
 
@@ -318,16 +450,17 @@ function resetGame() {
   score = 0;
   foodEaten = 0;
   tickCount = 0;
-  food = undefined;
+  foods = spawnFoods(foodCount, foodDurationMs);
 
   obstacles = [];
   for (let i = 0; i < obstacleCount; i++) {
-    obstacles.push(spawnRandom());
+    obstacles.push(spawnRandom(Infinity));
   }
 
-  food = spawnRandom();
   missions = pickMissions();
   effects = [];
+  timeRemainingMs = timeLimit;
+  lastTickTime = Date.now();
 }
 
 function startGame() {
@@ -341,6 +474,14 @@ function startGame() {
 
 function tick() {
   tickCount++;
+  const now = Date.now();
+  const delta = now - lastTickTime;
+  lastTickTime = now;
+
+  if (hasTimeLimit) {
+    timeRemainingMs -= delta;
+  }
+
   moveSnake(direction);
 
   if (isGameOver()) {
@@ -358,6 +499,7 @@ function tick() {
   }
 
   draw(ctx);
+
   updateDisplays();
   cleanupEffects();
   scheduleTick();
