@@ -1,4 +1,6 @@
 const DEFAULT_LEVEL = {
+  gridWidth: 20,
+  gridHeight: 20,
   winScore: 20,
   baseTickMs: 300,
   speedSteps: [1, 1.25, 1.5, 2],
@@ -26,6 +28,8 @@ const levels = {
   },
   3: {
     ...DEFAULT_LEVEL,
+    gridWidth: 30,
+    gridHeight: 30,
     baseTickMs: 200,
     speedSteps: [1, 1.5, 2, 3],
     winScore: 50,
@@ -35,7 +39,7 @@ const levels = {
     specialFoodTypes: ["slow", "speed", "extraFood", "extraTime"],
     foodCount: 2,
     hasTimeLimit: true,
-    timeLimit: 120000,
+    timeLimit: 150000,
   },
 };
 
@@ -125,11 +129,8 @@ const effectEl = document.getElementById("effects");
 const timeEl = document.getElementById("time");
 
 const cellSize = 20;
-const width = 20;
-const height = 20;
-
-board.width = width * cellSize;
-board.height = height * cellSize;
+let width = 20;
+let height = 20;
 
 const right = { x: 1, y: 0 };
 const left = { x: -1, y: 0 };
@@ -420,6 +421,12 @@ function scheduleTick() {
 function loadLevel(level) {
   const config = levels[level];
   currentLevel = level;
+
+  width = config.gridWidth; 
+  height = config.gridHeight;
+  board.width = width * cellSize;
+  board.height = height * cellSize;
+
   winScore = config.winScore;
   baseTickMs = config.baseTickMs;
   speedSteps = config.speedSteps;
@@ -434,7 +441,6 @@ function loadLevel(level) {
   hasTimeLimit = config.hasTimeLimit;
   timeLimit = config.timeLimit;
   showEffects = config.showEffects;
-
 }
 
 function resetGame() {
