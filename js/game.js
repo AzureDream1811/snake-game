@@ -202,12 +202,9 @@ function moveSnake(direction) {
   }
 
   snake.unshift(newHead);
-
   if (newHead.x === food.x && newHead.y === food.y) {
-    FOOD_TYPES[pickFoodType()].effect();
+    FOOD_TYPES[food.type].effect();
     food = spawnRandom(foodDurationMs);
-    score++;
-    foodEaten++;
   } else {
     snake.pop();
   }
@@ -398,7 +395,7 @@ function resetGame() {
 
   obstacles = [];
   for (let i = 0; i < obstacleCount; i++) {
-    obstacles.push(spawnRandom());
+    obstacles.push(spawnRandom(Infinity));
   }
   food = spawnRandom(foodDurationMs);
   missions = pickMissions();
