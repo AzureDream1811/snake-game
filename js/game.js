@@ -70,15 +70,36 @@ const MISSIONS = {
   },
 };
 
-const SPECIAL_FOOD = {
-  slow: () => {
-    (addEffect("slow", 5000), (score -= 1));
+const FOOD_TYPES = {
+  normal: {
+    color: "red",
+    effect: () => {
+      score++;
+      foodEaten++;
+    },
   },
-  speed: () => {
-    (addEffect("speed", 5000), (score += 2));
+  slow: {
+    color: "#5c00f1",
+    effect: () => {
+      addEffect("slow", 5000);
+      score -= 1;
+      foodEaten++;
+    },
   },
-  extraFood: () => {
-    score += 5;
+  speed: {
+    color: "#FFD23F",
+    effect: () => {
+      addEffect("speed", 5000);
+      score += 2;
+      foodEaten++;
+    },
+  },
+  extraFood: {
+    color: "#FF6B9D",
+    effect: () => {
+      score += 5;
+      foodEaten++;
+    },
   },
 };
 
@@ -148,13 +169,25 @@ function spawnRandom(durationMs) {
     };
   } while (isOccupied(pos));
 
-  setTimeout(() => {
-    if (food && food.x === pos.x && food.y === pos.y) {
-      food = null;
-    }
-  }, durationMs);
+  const type = pickFoodType();
+  const result = { x: pos.x, y: pos.y, type };
 
-  return pos;
+  if (Number.isFinite(durationMs)) {
+    setTimeout(() => {
+      if (food && food.x === result.x && food.y === result.y) food = null;
+    }, durationMs);
+  }
+  return result;
+}
+
+function pickFoodType() {
+  if (specialFood.length === 0) return "normal";
+  const roll = Math.random();
+
+  if (roll < 0.7) return "normal";
+
+  const pool = specialFood;
+  return pool[Math.floor(Math.random() * pool.length)];
 }
 
 function moveSnake(direction) {
@@ -171,6 +204,7 @@ function moveSnake(direction) {
   snake.unshift(newHead);
 
   if (newHead.x === food.x && newHead.y === food.y) {
+    FOOD_TYPES[pickFoodType()].effect();
     food = spawnRandom(foodDurationMs);
     score++;
     foodEaten++;
@@ -258,7 +292,7 @@ function updateDisplays() {
 }
 
 function drawFood(ctx, food) {
-  ctx.fillStyle = "red";
+  ctx.fillStyle = FOOD_TYPES[food.type].color;
   ctx.fillRect(food.x * cellSize, food.y * cellSize, cellSize, cellSize);
 }
 
@@ -364,7 +398,7 @@ function resetGame() {
 
   obstacles = [];
   for (let i = 0; i < obstacleCount; i++) {
-    obstacles.push(spawnRandom(9999999));
+    obstacles.push(spawnRandom());
   }
   food = spawnRandom(foodDurationMs);
   missions = pickMissions();
