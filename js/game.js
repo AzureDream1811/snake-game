@@ -112,6 +112,7 @@ const speedEl = document.getElementById("speed-up");
 const missionsEl = document.getElementById("missions");
 const tickCountEl = document.getElementById("tick-count");
 const effectEl = document.getElementById("effects");
+const timeEl = document.getElementById("time");
 
 const cellSize = 20;
 const width = 20;
@@ -149,6 +150,9 @@ let specialFood = [];
 let hasTimeLimit = false;
 let timeLimit = 0;
 let showEffects = false;
+let levelStartTime;
+let elapsed = 0;
+
 
 function isOccupied(pos) {
   return (
@@ -224,6 +228,10 @@ function isGameOver() {
     (obstacle) => obstacle.x === head.x && obstacle.y === head.y,
   );
 
+  if (hasTimeLimit && timeRemaining(elapsed) <= 0) {
+    return true;
+  }
+
   return hitWall || hitSelf || hitObstacle;
 }
 
@@ -241,6 +249,11 @@ function getSpeed() {
     speed *= 0.5;
   }
   return speed;
+}
+
+function timeRemaining(timeElapsed) {
+  if (!hasTimeLimit) return Infinity;
+  return Math.max(0, timeLimit - timeElapsed);
 }
 
 function updateFoodDisplay() {
@@ -279,6 +292,15 @@ function updateMissionDisplay() {
   });
 }
 
+function updateTimeDisplay() {
+  if (!hasTimeLimit) {
+    timeEl.hidden = true;
+    return;
+  }
+  timeEl.hidden = false;
+  timeEl.textContent = `Remaining: ${Math.ceil(timeRemaining(elapsed) / 1000)}s`;
+}
+
 function updateDisplays() {
   updateFoodDisplay();
   updateScoreDisplay();
@@ -286,6 +308,7 @@ function updateDisplays() {
   updateTickCountDisplay();
   updateMissionDisplay();
   updateEffectDisplay();
+  updateTimeDisplay();
 }
 
 function drawFood(ctx, food) {
@@ -400,6 +423,8 @@ function resetGame() {
   food = spawnRandom(foodDurationMs);
   missions = pickMissions();
   effects = [];
+  levelStartTime = Date.now();
+  elapsed = 0;
 }
 
 function startGame() {
@@ -413,6 +438,8 @@ function startGame() {
 
 function tick() {
   tickCount++;
+  elapsed = Date.now() - levelStartTime;
+
   if (!food) {
     food = spawnRandom(foodDurationMs);
   }
