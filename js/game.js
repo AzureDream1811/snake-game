@@ -1,59 +1,78 @@
+const DEFAULT_LEVEL = {
+  winScore: 20,
+  baseTickMs: 300,
+  speedSteps: [1, 1.25, 1.5, 2],
+  wrap: false,
+  obstacleCount: 0,
+  missionIds: [],
+  showEffects: false,
+  specialFoodTypes: [],
+  hasTimeLimit: false,
+  timeLimit: 0,
+};
+
 const levels = {
-  1: {
-    winScore: 10,
-    baseTickMs: 300,
-    speedSteps: [1, 1.25, 1.5, 2],
-    wrap: false,
-    obstacleCount: 0,
-    missionCount: 0,
-    missionPool: [],
-    showEffects: false,
-  },
+  1: { ...DEFAULT_LEVEL, winScore: 10 },
   2: {
+    ...DEFAULT_LEVEL,
     winScore: 30,
     baseTickMs: 250,
-    speedSteps: [1, 1.25, 1.5, 2],
     wrap: true,
     obstacleCount: 3,
-    missionCount: 3,
-    missionPool: [
-      {
-        text: "Reach length 8",
-        check: () => snake.length >= 8,
-        reward: () => {
-          addEffect("speed", 5000);
-        },
-      },
-      {
-        text: "Collect 5 food",
-        check: () => foodEaten >= 5,
-        reward: () => {
-          score += 5;
-        },
-      },
-      {
-        text: "Collect 8 food",
-        check: () => foodEaten >= 8,
-        reward: () => {
-          addEffect("speed", 3000);
-        },
-      },
-      {
-        text: "Reach length 12",
-        check: () => snake.length >= 12,
-        reward: () => {
-          score += 10;
-        },
-      },
-      {
-        text: "Survive 100 ticks",
-        check: () => tickCount >= 100,
-        reward: () => {
-          score += 2;
-        },
-      },
-    ],
+    missionIds: ["len8", "food5", "food8", "len12", "survive100"],
     showEffects: true,
+  },
+  3: {
+    ...DEFAULT_LEVEL,
+    winScore: 50,
+    wrap: true,
+    obstacleCount: 5,
+    showEffects: true,
+    specialFoodTypes: ["slow", "speed", "extraFood"],
+    hasTimeLimit: true,
+    timeLimit: 120000,
+  },
+};
+
+const MISSIONS = {
+  len8: {
+    text: "Reach length 8",
+    check: () => snake.length >= 8,
+    reward: () => addEffect("speed", 5000),
+  },
+  food5: {
+    text: "Collect 5 food",
+    check: () => foodEaten >= 5,
+    reward: () => {
+      score += 5;
+    },
+  },
+  food8: {
+    text: "Collect 8 food",
+    check: () => foodEaten >= 8,
+    reward: () => addEffect("speed", 3000),
+  },
+  len12: {
+    text: "Reach length 12",
+    check: () => snake.length >= 12,
+    reward: () => {
+      score += 10;
+    },
+  },
+  survive100: {
+    text: "Survive 100 ticks",
+    check: () => tickCount >= 100,
+    reward: () => {
+      score += 2;
+    },
+  },
+};
+
+const SPECIAL_FOOD = {
+  slow: () => addEffect("slow", 5000),
+  speed: () => addEffect("speed", 5000),
+  extraFood: () => {
+    score += 5;
   },
 };
 
@@ -98,6 +117,10 @@ let missionCount = 0;
 let missionPool = [];
 let missions = [];
 let effects = [];
+let specialFood = [];
+let hasTimeLimit = false;
+let timeLimit = 0;
+let showEffects = false;
 
 function isOccupied(pos) {
   return (
@@ -308,6 +331,27 @@ function loadLevel(level) {
   obstacleCount = config.obstacleCount;
   missionCount = config.missionCount;
   missionPool = config.missionPool;
+  specialFood = config.specialFood;
+  hasTimeLimit = config.hasTimeLimit;
+  timeLimit = config.timeLimit;
+  showEffects = config.showEffects;
+}
+
+function loadLevel(level) {
+  const config = levels[level];
+  currentLevel = level;
+  winScore = config.winScore;
+  baseTickMs = config.baseTickMs;
+  speedSteps = config.speedSteps;
+  wrap = config.wrap;
+  obstacleCount = config.obstacleCount;
+
+  missionPool = config.missionIds.map((id) => MISSIONS[id]);
+  missionCount = missionPool.length;
+
+  specialFood = config.specialFoodTypes;
+  hasTimeLimit = config.hasTimeLimit;
+  timeLimit = config.timeLimit;
   showEffects = config.showEffects;
 }
 
