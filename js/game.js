@@ -13,7 +13,6 @@ const DEFAULT_LEVEL = {
   hasTimeLimit: false,
   timeLimit: 0,
   hasHealth: false,
-  health: 0,
 };
 
 const levels = {
@@ -24,7 +23,7 @@ const levels = {
     baseTickMs: 250,
     wrap: true,
     obstacleCount: 3,
-    missionIds: ["len8", "food5", "food8", "len12", "survive100"],
+    missionIds: ["len8", "food5", "food8", "len12", "survive300"],
     missionCount: 3,
     showEffects: true,
   },
@@ -38,7 +37,7 @@ const levels = {
     wrap: true,
     obstacleCount: 9,
     showEffects: true,
-    specialFoodTypes: ["slow", "speed", "extraFood", "extraTime"],
+    specialFoodTypes: ["slow", "speed", "extraFood", "extraTime", "poison"],
     foodCount: 2,
     hasTimeLimit: true,
     timeLimit: 150000,
@@ -52,13 +51,15 @@ const levels = {
     winScore: 50,
     wrap: true,
     obstacleCount: 9,
+    missionIds: ["len8", "food5", "food8", "len12", "survive300t", "poison", "survive40s"],
+    missionCount: 3,
     showEffects: true,
-    specialFoodTypes: ["slow", "speed", "extraFood", "extraTime"],
+    specialFoodTypes: ["slow", "speed", "extraFood", "extraTime", "poison"],
     foodCount: 3,
     hasTimeLimit: true,
     timeLimit: 150000,
     hasHealth: true,
-    health: 5,
+    health: 3,
   },
 };
 
@@ -87,12 +88,24 @@ const MISSIONS = {
       score += 10;
     },
   },
-  survive100: {
-    text: "Survive 100 ticks",
-    check: () => tickCount >= 100,
+  survive300t: {
+    text: "Survive 300 ticks",
+    check: () => tickCount >= 300,
     reward: () => {
       score += 2;
     },
+  },
+  poison: {
+    text: "Eat 3 poison food",
+    check: () => poison >= 3,
+    reward: () => {
+      score += 15;
+    },
+  },
+  survive40s: {
+    text: "Survive for 40s",
+    check: () => timeElapsed >= 40,
+    reward: () => addEffect("speed", 3000),
   },
 };
 
@@ -102,6 +115,7 @@ const FOOD_TYPES = {
     effect: () => {
       score++;
       foodEaten++;
+      normal++;
     },
   },
   slow: {
@@ -110,6 +124,7 @@ const FOOD_TYPES = {
       addEffect("slow", 5000);
       score += 1;
       foodEaten++;
+      slow++;
     },
   },
   speed: {
@@ -118,6 +133,7 @@ const FOOD_TYPES = {
       addEffect("speed", 5000);
       score += 2;
       foodEaten++;
+      speed++;
     },
   },
   extraFood: {
@@ -125,6 +141,7 @@ const FOOD_TYPES = {
     effect: () => {
       score += 5;
       foodEaten++;
+      extraFood++;
     },
   },
   extraTime: {
@@ -132,6 +149,7 @@ const FOOD_TYPES = {
     effect: () => {
       timeRemainingMs += 10000;
       foodEaten++;
+      extraTime++;
     },
   },
   poison: {
@@ -139,6 +157,8 @@ const FOOD_TYPES = {
     effect: () => {
       health--;
       score -= 3;
+      foodEaten++;
+      poison++;
     },
   },
 };
@@ -193,6 +213,13 @@ let timeRemainingMs = 0;
 let lastTickTime = 0;
 let hasHealth = false;
 let health = 0;
+
+var normal = 0;
+var slow = 0;
+var speed = 0;
+var extraFood = 0;
+var extraTime = 0;
+var poison = 0;
 
 function isOccupied(pos) {
   return (
