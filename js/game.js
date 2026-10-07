@@ -108,7 +108,7 @@ const FOOD_TYPES = {
     color: "#5c00f1",
     effect: () => {
       addEffect("slow", 5000);
-      score -= 1;
+      score += 1;
       foodEaten++;
     },
   },
@@ -132,6 +132,13 @@ const FOOD_TYPES = {
     effect: () => {
       timeRemainingMs += 10000;
       foodEaten++;
+    },
+  },
+  poison: {
+    color: "#5c00f1",
+    effect: () => {
+      health--;
+      score -= 3;
     },
   },
 };
@@ -281,7 +288,9 @@ function isGameOver() {
     return true;
   }
 
-  return hitWall || hitSelf || hitObstacle;
+  const outOfHealth = hasHealth && health <= 0;
+
+  return hitWall || hitSelf || hitObstacle || outOfHealth;
 }
 
 function isGameWin() {
