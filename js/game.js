@@ -12,6 +12,8 @@ const DEFAULT_LEVEL = {
   specialFoodTypes: [],
   hasTimeLimit: false,
   timeLimit: 0,
+  hasHealth: false,
+  health: 0,
 };
 
 const levels = {
@@ -34,12 +36,29 @@ const levels = {
     speedSteps: [1, 1.5, 2, 3],
     winScore: 50,
     wrap: true,
-    obstacleCount: 5,
+    obstacleCount: 9,
     showEffects: true,
     specialFoodTypes: ["slow", "speed", "extraFood", "extraTime"],
     foodCount: 2,
     hasTimeLimit: true,
     timeLimit: 150000,
+  },
+  4: {
+    ...DEFAULT_LEVEL,
+    gridWidth: 30,
+    gridHeight: 30,
+    baseTickMs: 200,
+    speedSteps: [1.25, 1.75, 2.25, 3.25],
+    winScore: 50,
+    wrap: true,
+    obstacleCount: 9,
+    showEffects: true,
+    specialFoodTypes: ["slow", "speed", "extraFood", "extraTime"],
+    foodCount: 3,
+    hasTimeLimit: true,
+    timeLimit: 150000,
+    hasHealth: true,
+    health: 5,
   },
 };
 
@@ -127,6 +146,7 @@ const missionsEl = document.getElementById("missions");
 const tickCountEl = document.getElementById("tick-count");
 const effectEl = document.getElementById("effects");
 const timeEl = document.getElementById("time");
+const healthEl = document.getElementById("health");
 
 const cellSize = 20;
 let width = 20;
@@ -164,6 +184,8 @@ let timeLimit = 0;
 let showEffects = false;
 let timeRemainingMs = 0;
 let lastTickTime = 0;
+let hasHealth = false;
+let health = 0;
 
 function isOccupied(pos) {
   return (
@@ -328,6 +350,16 @@ function updateTimeDisplay() {
   timeEl.textContent = `Remaining: ${Math.ceil(Math.max(0, timeRemainingMs) / 1000)}s`;
 }
 
+function udpateHealthDisplay() {
+  if (!hasHealth) {
+    healthEl.hidden = true;
+    return;
+  }
+
+  healthEl.hidden = false;
+  healthEl.textContent = `Health: ${Math.max(0, health)}`;
+}
+
 function updateDisplays() {
   updateFoodDisplay();
   updateScoreDisplay();
@@ -336,6 +368,7 @@ function updateDisplays() {
   updateMissionDisplay();
   updateEffectDisplay();
   updateTimeDisplay();
+  udpateHealthDisplay();
 }
 
 function drawFood(ctx, foods) {
@@ -422,7 +455,7 @@ function loadLevel(level) {
   const config = levels[level];
   currentLevel = level;
 
-  width = config.gridWidth; 
+  width = config.gridWidth;
   height = config.gridHeight;
   board.width = width * cellSize;
   board.height = height * cellSize;
@@ -441,6 +474,9 @@ function loadLevel(level) {
   hasTimeLimit = config.hasTimeLimit;
   timeLimit = config.timeLimit;
   showEffects = config.showEffects;
+
+  hasHealth = config.hasHealth;
+  health = config.health;
 }
 
 function resetGame() {
