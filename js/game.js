@@ -48,7 +48,7 @@ const levels = {
     gridHeight: 30,
     baseTickMs: 200,
     speedSteps: [1.25, 1.75, 2.25, 3.25],
-    winScore: 50,
+    winScore: 40,
     wrap: true,
     obstacleCount: 9,
     missionIds: [
@@ -173,7 +173,8 @@ const FOOD_TYPES = {
 };
 
 const board = document.getElementById("game-board");
-const ctx = board.getContext("2d");
+board.style.position = "relative";
+board.style.background = "black";
 const levelSelect = document.getElementById("level-select");
 const foodEl = document.getElementById("food");
 const scoresEL = document.getElementById("scores");
@@ -416,44 +417,27 @@ function updateDisplays() {
   udpateHealthDisplay();
 }
 
-function drawFood(ctx, foods) {
-  foods.forEach((f) => {
-    ctx.fillStyle = FOOD_TYPES[f.type].color;
-    ctx.fillRect(f.x * cellSize, f.y * cellSize, cellSize, cellSize);
-  });
+function createCell(x, y, color) {
+  const cell = document.createElement("div");
+  cell.style.position = "absolute";
+  cell.style.left = `${x * cellSize}px`;
+  cell.style.top = `${y * cellSize}px`;
+  cell.style.width = `${cellSize}px`;
+  cell.style.height = `${cellSize}px`;
+  cell.style.background = color;
+  return cell;
 }
 
-function drawSnake(ctx) {
-  ctx.fillStyle = "green";
-  snake.forEach((segment) => {
-    ctx.fillRect(
-      segment.x * cellSize,
-      segment.y * cellSize,
-      cellSize,
-      cellSize,
-    );
-  });
-}
+function draw() {
+  const fragment = document.createDocumentFragment();
 
+  obstacles.forEach((o) => fragment.appendChild(createCell(o.x, o.y, "gray")));
+  foods.forEach((f) =>
+    fragment.appendChild(createCell(f.x, f.y, FOOD_TYPES[f.type].color)),
+  );
+  snake.forEach((s) => fragment.appendChild(createCell(s.x, s.y, "green")));
 
-function drawObstacles(ctx) {
-  ctx.fillStyle = "gray";
-  obstacles.forEach((obstacle) => {
-    ctx.fillRect(
-      obstacle.x * cellSize,
-      obstacle.y * cellSize,
-      cellSize,
-      cellSize,
-    );
-  });
-}
-
-function draw(ctx) {
-  ctx.fillStyle = "black";
-  ctx.fillRect(0, 0, width * cellSize, height * cellSize);
-  drawObstacles(ctx);
-  drawFood(ctx, foods);
-  drawSnake(ctx);
+  board.replaceChildren(fragment);
 }
 
 function pickMissions() {
@@ -503,8 +487,8 @@ function loadLevel(level) {
 
   width = config.gridWidth;
   height = config.gridHeight;
-  board.width = width * cellSize;
-  board.height = height * cellSize;
+  board.style.width = `${width * cellSize}px`;
+  board.style.height = `${height * cellSize}px`;
 
   winScore = config.winScore;
   baseTickMs = config.baseTickMs;
@@ -555,7 +539,7 @@ function startGame() {
   clearTimeout(timer);
   loadLevel(currentLevel);
   resetGame();
-  draw(ctx);
+  draw();
   updateDisplays();
   scheduleTick();
 }
@@ -586,7 +570,7 @@ function tick() {
     return;
   }
 
-  draw(ctx);
+  draw();
 
   updateDisplays();
   cleanupEffects();
