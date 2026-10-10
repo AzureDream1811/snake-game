@@ -236,23 +236,24 @@ let poison = 0;
 // draw
 function drawBoard() {
   board.replaceChildren();
-  cells = [];
   board.style.gridTemplateColumns = `repeat(${width}, ${CELL_SIZE}px)`;
 
-  for (let row = 0; row < height; row++) {
-    for (let col = 0; col < width; col++) {
+  cells = Array.from({ length: height }, () => []);
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
       const cell = document.createElement("div");
       cell.classList.add("cell");
       cell.style.width = `${CELL_SIZE}px`;
       cell.style.height = `${CELL_SIZE}px`;
-      cells.push(cell);
+      cells[x][y] = cell;
       board.appendChild(cell);
     }
   }
 }
 
 function getCell(x, y) {
-  return cells[y * width + x];
+  return cells[x][y];
 }
 
 function addClass(pos, classname) {
