@@ -15,7 +15,7 @@ const DEFAULT_LEVEL = {
   hasHealth: false,
 };
 
-const levels = {
+const LEVELS = {
   1: { ...DEFAULT_LEVEL, winScore: 10 },
   2: {
     ...DEFAULT_LEVEL,
@@ -23,7 +23,7 @@ const levels = {
     baseTickMs: 250,
     wrap: true,
     obstacleCount: 3,
-    missionIds: ["len8", "food5", "food8", "len12", "survive300"],
+    missionIds: ["len8", "food5", "food8", "len12", "survive300t"],
     missionCount: 3,
     showEffects: true,
   },
@@ -112,7 +112,7 @@ const MISSIONS = {
   },
   survive40s: {
     text: "Survive for 40s",
-    check: () => timeElapsed >= 40,
+    check: () => timeElapsedMs >= 40000,
     reward: () => addEffect("speed", 3000),
   },
 };
@@ -172,12 +172,20 @@ const FOOD_TYPES = {
   },
 };
 
+const CELL_SIZE = 20;
+const FOOD_DURATION_MS = 10000;
+
+const RIGHT = { x: 1, y: 0 };
+const LEFT = { x: -1, y: 0 };
+const UP = { x: 0, y: -1 };
+const DOWN = { x: 0, y: 1 };
+
 const board = document.getElementById("game-board");
 board.style.position = "relative";
 board.style.background = "black";
 const levelSelect = document.getElementById("level-select");
 const foodEl = document.getElementById("food");
-const scoresEL = document.getElementById("scores");
+const scoresEl = document.getElementById("scores");
 const speedEl = document.getElementById("speed-up");
 const missionsEl = document.getElementById("missions");
 const tickCountEl = document.getElementById("tick-count");
@@ -185,23 +193,15 @@ const effectEl = document.getElementById("effects");
 const timeEl = document.getElementById("time");
 const healthEl = document.getElementById("health");
 
-const cellSize = 20;
-let width = 20;
+const snake = [];
 let height = 20;
 
-const right = { x: 1, y: 0 };
-const left = { x: -1, y: 0 };
-const up = { x: 0, y: -1 };
-const down = { x: 0, y: 1 };
-
-const snake = [];
 let foods = [];
-let direction = right;
+let direction = RIGHT;
 let score = 0;
 let timer;
 let tickCount = 0;
 let foodEaten = 0;
-let foodDurationMs = 10000;
 let foodCount = 1;
 
 let currentLevel = 1;
@@ -221,15 +221,16 @@ let timeLimit = 0;
 let showEffects = false;
 let timeRemainingMs = 0;
 let lastTickTime = 0;
+let timeElapsedMs = 0;
 let hasHealth = false;
 let health = 0;
 
-var normal = 0;
-var slow = 0;
-var speed = 0;
-var extraFood = 0;
-var extraTime = 0;
-var poison = 0;
+let normal = 0;
+let slow = 0;
+let speed = 0;
+let extraFood = 0;
+let extraTime = 0;
+let poison = 0;
 
 function isOccupied(pos) {
   return (
@@ -301,7 +302,7 @@ function moveSnake(direction) {
 
   if (eatenIndex !== -1) {
     FOOD_TYPES[foods[eatenIndex].type].effect();
-    foods.splice(eatenIndex, 1, spawnRandom(foodDurationMs));
+    foods.splice(eatenIndex, 1, spawnRandom(FOOD_DURATION_MS));
   } else {
     snake.pop();
   }
@@ -336,14 +337,14 @@ function isGameWin() {
 
 function getSpeed() {
   const index = Math.min(Math.floor(foodEaten / 3), speedSteps.length - 1);
-  let speed = speedSteps[index];
+  let currentSpeed = speedSteps[index];
   if (hasEffect("speed")) {
-    speed *= 1.5;
+    currentSpeed *= 1.5;
   }
   if (hasEffect("slow")) {
-    speed *= 0.5;
+    currentSpeed *= 0.5;
   }
-  return speed;
+  return currentSpeed;
 }
 
 function timeRemaining(timeElapsed) {
@@ -356,7 +357,7 @@ function updateFoodDisplay() {
 }
 
 function updateScoreDisplay() {
-  scoresEL.textContent = `Score: ${score}/${winScore}`;
+  scoresEl.textContent = `Score: ${score}/${winScore}`;
 }
 
 function updateSpeedDisplay() {
@@ -396,7 +397,7 @@ function updateTimeDisplay() {
   timeEl.textContent = `Remaining: ${Math.ceil(Math.max(0, timeRemainingMs) / 1000)}s`;
 }
 
-function udpateHealthDisplay() {
+function updateHealthDisplay() {
   if (!hasHealth) {
     healthEl.hidden = true;
     return;
@@ -414,16 +415,16 @@ function updateDisplays() {
   updateMissionDisplay();
   updateEffectDisplay();
   updateTimeDisplay();
-  udpateHealthDisplay();
+  updateHealthDisplay();
 }
 
 function createCell(x, y, color) {
   const cell = document.createElement("div");
   cell.style.position = "absolute";
-  cell.style.left = `${x * cellSize}px`;
-  cell.style.top = `${y * cellSize}px`;
-  cell.style.width = `${cellSize}px`;
-  cell.style.height = `${cellSize}px`;
+  cell.style.left = `${x * CELL_SIZE}px`;
+  cell.style.top = `${y * CELL_SIZE}px`;
+  cell.style.width = `${CELL_SIZE}px`;
+  cell.style.height = `${CELL_SIZE}px`;
   cell.style.background = color;
   return cell;
 }
@@ -482,20 +483,20 @@ function scheduleTick() {
 }
 
 function loadLevel(level) {
-  const config = levels[level];
+  const config = LEVELS[level];
   currentLevel = level;
 
   width = config.gridWidth;
   height = config.gridHeight;
-  board.style.width = `${width * cellSize}px`;
-  board.style.height = `${height * cellSize}px`;
+  board.style.width = `${width * CELL_SIZE}px`;
+  board.style.height = `${height * CELL_SIZE}px`;
 
   winScore = config.winScore;
   baseTickMs = config.baseTickMs;
   speedSteps = config.speedSteps;
   wrap = config.wrap;
   obstacleCount = config.obstacleCount;
-  foodCount = levels[currentLevel].foodCount || 1;
+  foodCount = config.foodCount || 1;
 
   missionPool = config.missionIds.map((id) => MISSIONS[id]);
   missionCount = config.missionCount;
@@ -512,11 +513,11 @@ function loadLevel(level) {
 function resetGame() {
   snake.length = 0;
   snake.push({ x: 5, y: 5 }, { x: 4, y: 5 }, { x: 3, y: 5 });
-  direction = right;
+  direction = RIGHT;
   score = 0;
   foodEaten = 0;
   tickCount = 0;
-  foods = spawnFoods(foodCount, foodDurationMs);
+  foods = spawnFoods(foodCount, FOOD_DURATION_MS);
 
   obstacles = [];
   for (let i = 0; i < obstacleCount; i++) {
@@ -527,6 +528,7 @@ function resetGame() {
   effects = [];
   timeRemainingMs = timeLimit;
   lastTickTime = Date.now();
+  timeElapsedMs = 0;
   normal = 0;
   slow = 0;
   speed = 0;
@@ -549,6 +551,7 @@ function tick() {
   const now = Date.now();
   const delta = now - lastTickTime;
   lastTickTime = now;
+  timeElapsedMs += delta;
 
   if (hasTimeLimit) {
     timeRemainingMs -= delta;
@@ -578,24 +581,24 @@ function tick() {
 }
 
 document.addEventListener("keydown", (e) => {
-  if (e.key === "ArrowUp" && direction !== down) {
-    direction = up;
+  if (e.key === "ArrowUp" && direction !== DOWN) {
+    direction = UP;
   }
 
-  if (e.key === "ArrowDown" && direction !== up) {
-    direction = down;
+  if (e.key === "ArrowDown" && direction !== UP) {
+    direction = DOWN;
   }
 
-  if (e.key === "ArrowLeft" && direction !== right) {
-    direction = left;
+  if (e.key === "ArrowLeft" && direction !== RIGHT) {
+    direction = LEFT;
   }
 
-  if (e.key === "ArrowRight" && direction !== left) {
-    direction = right;
+  if (e.key === "ArrowRight" && direction !== LEFT) {
+    direction = RIGHT;
   }
 });
 
-Object.keys(levels).forEach((key) => {
+Object.keys(LEVELS).forEach((key) => {
   const option = document.createElement("option");
   option.value = key;
   option.textContent = `Level ${key}`;
