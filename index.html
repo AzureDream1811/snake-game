@@ -10,23 +10,30 @@
 
 <body>
     <h1>Snake Game</h1>
-    <label>
-        Level:
-        <select id="level-select"></select>
-    </label>
-    <div id="time">Remaining: 0s</div>
-    <div id="scores">Score: 0</div>
-    <div id="food">Food eaten: 0</div>
-    <div id="speed-up">Speed: 1.0x</div>
+    <div id="level-buttons">
+        <button data-level="1">Level 1</button>
+        <button data-level="2">Level 2</button>
+        <button data-level="3">Level 3</button>
+        <button data-level="4">Level 4</button>
+    </div>
 
-    <br>
-    <div id="health">Health: 0</div>
-    <br>
+    <div id="hud">
+        <div id="scores">Score: 0</div>
+        <div id="combo">Combo</div>
+        <div id="health">Health: 0</div>
+        <div id="time">Remaining: 0s</div>
+        <div id="food">Food eaten: 0</div>
+        <div id="speed-up">Speed: 1.0x</div>
+        <div id="tick-count">Ticks: 0</div>
+    </div>
 
-    <div id="tick-count">Ticks: 0</div>
-    <ul id="missions"></ul>
-    <div id="effects">current effects: none</div>
-    <div id="game-board"></div>
+    <div id="game-area">
+        <div id="game-board"></div>
+        <aside id="side-panel">
+            <div id="effects">Current effects: none</div>
+            <ul id="missions"></ul>
+        </aside>
+    </div>
     <script src="js/game.js"></script>
 </body>
 

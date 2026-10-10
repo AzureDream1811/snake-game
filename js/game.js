@@ -176,7 +176,7 @@ const DOWN = { x: 0, y: 1 };
 
 const board = document.getElementById("game-board");
 
-const levelSelect = document.getElementById("level-select");
+const levelButtons = document.getElementById("level-buttons");
 const foodEl = document.getElementById("food");
 const scoresEl = document.getElementById("scores");
 const speedEl = document.getElementById("speed-up");
@@ -185,6 +185,7 @@ const tickCountEl = document.getElementById("tick-count");
 const effectEl = document.getElementById("effects");
 const timeEl = document.getElementById("time");
 const healthEl = document.getElementById("health");
+const comboEl = document.getElementById("combo");
 
 const snake = [];
 let cells = [];
@@ -219,6 +220,7 @@ let lastTickTime = 0;
 let timeElapsedMs = 0;
 let hasHealth = false;
 let health = 0;
+let combo = 0;
 
 let normal = 0;
 let slow = 0;
@@ -232,7 +234,7 @@ function drawBoard() {
   board.replaceChildren();
   board.style.gridTemplateColumns = `repeat(${width}, ${CELL_SIZE}px)`;
 
-  cells = Array.from({ length: height }, () => []);
+  cells = Array.from({ length: width }, () => []);
 
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
@@ -590,6 +592,7 @@ function startGame() {
   foods.forEach((food) => clearTimeout(food.timeoutId));
 
   loadLevel(currentLevel);
+  updateLevelButtons();
   drawBoard();
   resetGame();
 
@@ -653,17 +656,22 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-Object.keys(LEVELS).forEach((key) => {
-  const option = document.createElement("option");
-  option.value = key;
-  option.textContent = `Level ${key}`;
-  levelSelect.appendChild(option);
-});
+levelButtons.addEventListener("click", (e) => {
+  const button = e.target.closest("button");
+  if (!button) return;
 
-levelSelect.addEventListener("change", () => {
-  currentLevel = Number(levelSelect.value);
-  levelSelect.blur();
+  currentLevel = Number(button.dataset.level);
+  button.blur();
   startGame();
 });
+
+function updateLevelButtons() {
+  levelButtons.querySelectorAll("button").forEach((button) => {
+    button.classList.toggle(
+      "active",
+      Number(button.dataset.level) === currentLevel,
+    );
+  });
+}
 
 startGame();

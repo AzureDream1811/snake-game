@@ -9,7 +9,7 @@ body
 
 .cell
   box-sizing: border-box
-  border: 1px solid #333
+  border: none
 
 .snake
   background: green
@@ -39,3 +39,27 @@ body
 
 .obstacle
   background: gray
+
+#level-buttons
+  display: flex
+  gap: 8px
+  margin-bottom: 12px
+
+#level-buttons button.active
+  background: green
+  color: white
+
+#hud
+  display: flex
+  flex-wrap: wrap
+  gap: 4px 16px
+  margin-bottom: 12px
+
+#game-area
+  display: flex
+  gap: 16px
+  align-items: flex-start
+
+#game-board
+  display: grid
+  background: black
