@@ -51,7 +51,15 @@ const levels = {
     winScore: 50,
     wrap: true,
     obstacleCount: 9,
-    missionIds: ["len8", "food5", "food8", "len12", "survive300t", "poison", "survive40s"],
+    missionIds: [
+      "len8",
+      "food5",
+      "food8",
+      "len12",
+      "survive300t",
+      "poison",
+      "survive40s",
+    ],
     missionCount: 3,
     showEffects: true,
     specialFoodTypes: ["slow", "speed", "extraFood", "extraTime", "poison"],
@@ -148,6 +156,7 @@ const FOOD_TYPES = {
     color: "#2ECC71",
     effect: () => {
       timeRemainingMs += 10000;
+      score++;
       foodEaten++;
       extraTime++;
     },
@@ -269,7 +278,7 @@ function pickFoodType() {
   if (roll < 0.7) return "normal";
 
   const pool = specialFood;
-  return pool[Math.floor(Math.random() * pool.length)];
+  return pool[Math.floor(roll * pool.length)];
 }
 
 function moveSnake(direction) {
@@ -426,6 +435,7 @@ function drawSnake(ctx) {
   });
 }
 
+
 function drawObstacles(ctx) {
   ctx.fillStyle = "gray";
   obstacles.forEach((obstacle) => {
@@ -533,6 +543,12 @@ function resetGame() {
   effects = [];
   timeRemainingMs = timeLimit;
   lastTickTime = Date.now();
+  normal = 0;
+  slow = 0;
+  speed = 0;
+  extraFood = 0;
+  extraTime = 0;
+  poison = 0;
 }
 
 function startGame() {
