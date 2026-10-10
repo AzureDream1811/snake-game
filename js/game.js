@@ -49,7 +49,7 @@ const LEVELS = {
     gridHeight: 30,
     baseTickMs: 200,
     speedSteps: [1.25, 1.75, 2.25, 3.25],
-    winScore: 40,
+    winScore: 100,
     wrap: true,
     obstacleCount: 9,
     missionIds: [
@@ -66,7 +66,7 @@ const LEVELS = {
     specialFoodTypes: ["slow", "speed", "extraFood", "extraTime", "poison"],
     foodCount: 3,
     hasTimeLimit: true,
-    timeLimit: 150000,
+    timeLimit: 60000,
     hasHealth: true,
     health: 3,
     hasCombo: true,
@@ -295,7 +295,7 @@ function renderObstacles() {
   });
 }
 
-function moveSnake(direction) {
+function getNextSnakeHead(direction) {
   const head = snake[0];
   const newHead = { x: head.x + direction.x, y: head.y + direction.y };
 
@@ -306,34 +306,40 @@ function moveSnake(direction) {
     if (newHead.y >= height) newHead.y = 0;
   }
 
+  return newHead;
+}
+
+function increaseCombo() {
+  if (!hasCombo) return;
+  combo = Math.min(combo + 1, MAX_COMBO);
+  comboEndsAt = Date.now() + COMBO_DURATION_MS;
+}
+
+function eatFood(food) {
+  increaseCombo();
+  FOOD_TYPES[food.type].effect();
+  replaceFood(food);
+}
+
+function moveSnake(direction) {
+  const newHead = getNextSnakeHead(direction);
+
   snake.unshift(newHead);
 
   const eatenFood = foods.find((f) => f.x === newHead.x && f.y === newHead.y);
 
   if (eatenFood) {
-    if (hasCombo) {
-      const now = Date.now();
-      if (now < comboEndsAt) {
-        combo = Math.min(combo + 1, MAX_COMBO);
-      } else {
-        combo = 1;
-      }
-      comboEndsAt = now + COMBO_DURATION_MS;
-    }
-
-    FOOD_TYPES[eatenFood.type].effect();
-    replaceFood(eatenFood);
-    return null;
+    eatFood(eatenFood);
+  } else {
+    snake.pop();
   }
-
-  return snake.pop();
 }
 
-function renderSnakeMove(removedTail) {
-  if (removedTail) {
-    removeClass(removedTail, "snake");
-  }
-  addClass(snake[0], "snake");
+function renderSnake() {
+  board.querySelectorAll(".snake").forEach((cell) => {
+    cell.classList.remove("snake");
+  });
+  snake.forEach((segment) => addClass(segment, "snake"));
 }
 
 function render() {
@@ -669,7 +675,7 @@ function tick() {
     timeRemainingMs -= delta;
   }
 
-  const removedTail = moveSnake(direction);
+  moveSnake(direction);
 
   if (isGameOver()) {
     alert("Game Over!");
@@ -677,7 +683,7 @@ function tick() {
     return;
   }
 
-  renderSnakeMove(removedTail);
+  renderSnake();
 
   updateMissions();
 
