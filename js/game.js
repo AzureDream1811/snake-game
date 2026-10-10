@@ -119,7 +119,6 @@ const MISSIONS = {
 
 const FOOD_TYPES = {
   normal: {
-    color: "red",
     effect: () => {
       score++;
       foodEaten++;
@@ -127,7 +126,6 @@ const FOOD_TYPES = {
     },
   },
   slow: {
-    color: "#5c00f1",
     effect: () => {
       addEffect("slow", 5000);
       score += 1;
@@ -136,7 +134,6 @@ const FOOD_TYPES = {
     },
   },
   speed: {
-    color: "#FFD23F",
     effect: () => {
       addEffect("speed", 5000);
       score += 2;
@@ -145,7 +142,6 @@ const FOOD_TYPES = {
     },
   },
   extraFood: {
-    color: "#FF6B9D",
     effect: () => {
       score += 5;
       foodEaten++;
@@ -153,7 +149,6 @@ const FOOD_TYPES = {
     },
   },
   extraTime: {
-    color: "#2ECC71",
     effect: () => {
       timeRemainingMs += 10000;
       score++;
@@ -162,7 +157,6 @@ const FOOD_TYPES = {
     },
   },
   poison: {
-    color: "#5c00f1",
     effect: () => {
       health--;
       score -= 3;
@@ -277,11 +271,13 @@ function renderFoods() {
 }
 
 function showFood(food) {
-  getCell(food.x, food.y).style.backgroundColor = FOOD_TYPES[food.type].color;
+  const cell = getCell(food.x, food.y);
+  cell.classList.add("food", `food-${food.type}`);
 }
 
 function hideFood(food) {
-  getCell(food.x, food.y).style.backgroundColor = "";
+  const cell = getCell(food.x, food.y);
+  cell.classList.remove("food", `food-${food.type}`);
 }
 
 function renderObstacles() {

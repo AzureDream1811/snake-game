@@ -16,6 +16,36 @@ body {
 
 .snake {
   background: green;
+  border-radius: 20%;
+}
+
+.food {
+  border-radius: 50%;
+  transform: scale(0.8);
+}
+
+.food-normal {
+  background: red;
+}
+
+.food-slow {
+  background: #5c00f1;
+}
+
+.food-speed {
+  background: #FFD23F;
+}
+
+.food-extraFood {
+  background: #FF6B9D;
+}
+
+.food-extraTime {
+  background: #2ECC71;
+}
+
+.food-poison {
+  background: #5c00f1;
 }
 
 .obstacle {
