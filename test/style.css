@@ -1,0 +1,14 @@
+#game-board {
+  display: grid;
+  grid-template-columns: repeat(10, 20px);
+  grid-template-rows: repeat(10, 20px);
+}
+
+.cell {
+  width: 20px;
+  height: 20px;
+  box-sizing: border-box;
+  border: 1px solid #ccc;
+  background-color: #222;
+  border: none;
+}
