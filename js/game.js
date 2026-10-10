@@ -699,19 +699,19 @@ function tick() {
 }
 
 document.addEventListener("keydown", (e) => {
-  if (e.key === "ArrowUp" && direction !== DOWN) {
+  if ((e.key === "ArrowUp" || e.key === "w") && direction !== DOWN) {
     direction = UP;
   }
 
-  if (e.key === "ArrowDown" && direction !== UP) {
+  if ((e.key === "ArrowDown" || e.key === "s") && direction !== UP) {
     direction = DOWN;
   }
 
-  if (e.key === "ArrowLeft" && direction !== RIGHT) {
+  if ((e.key === "ArrowLeft" || e.key === "a") && direction !== RIGHT) {
     direction = LEFT;
   }
 
-  if (e.key === "ArrowRight" && direction !== LEFT) {
+  if ((e.key === "ArrowRight" || e.key === "d") && direction !== LEFT) {
     direction = RIGHT;
   }
 });
