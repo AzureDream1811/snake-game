@@ -52,6 +52,10 @@ body {
   background: gray;
 }
 
+.moving-obstacle {
+  background: orange;
+}
+
 #level-buttons {
   display: flex;
   gap: 8px;

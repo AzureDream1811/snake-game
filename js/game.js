@@ -14,6 +14,7 @@ const DEFAULT_LEVEL = {
   timeLimit: 0,
   hasHealth: false,
   hasCombo: false,
+  hasMovingObstacles: false,
 };
 
 const LEVELS = {
@@ -51,7 +52,7 @@ const LEVELS = {
     speedSteps: [1.25, 1.75, 2.25, 3.25],
     winScore: 100,
     wrap: true,
-    obstacleCount: 9,
+    obstacleCount: 4,
     missionIds: [
       "len8",
       "food5",
@@ -70,6 +71,8 @@ const LEVELS = {
     hasHealth: true,
     health: 3,
     hasCombo: true,
+    hasMovingObstacles: true,
+    numberOfMovingObstacles: 2,
   },
 };
 
@@ -170,6 +173,7 @@ const FOOD_TYPES = {
 
 const CELL_SIZE = 20;
 const FOOD_DURATION_MS = 10000;
+const SAFE_SPAWN_DISTANCE = 5;
 
 const RIGHT = { x: 1, y: 0 };
 const LEFT = { x: -1, y: 0 };
@@ -228,6 +232,9 @@ let combo = 0;
 let comboEndsAt = 0;
 const COMBO_DURATION_MS = 5000;
 const MAX_COMBO = 5;
+let hasMovingObstacles = false;
+let numberOfMovingObstacles = 0;
+let movingObstacles = [];
 
 let normal = 0;
 let slow = 0;
@@ -267,10 +274,15 @@ function removeClass(pos, classname) {
   getCell(pos.x, pos.y).classList.remove(classname);
 }
 
-function renderSnake() {
-  snake.forEach((s) => {
-    addClass(s, "snake");
+function renderCells(classname, positions) {
+  board.querySelectorAll(`.${classname}`).forEach((cell) => {
+    cell.classList.remove(classname);
   });
+  positions.forEach((pos) => addClass(pos, classname));
+}
+
+function renderSnake() {
+  renderCells("snake", snake);
 }
 
 function renderFoods() {
@@ -293,6 +305,69 @@ function renderObstacles() {
   obstacles.forEach((o) => {
     addClass(o, "obstacle");
   });
+}
+
+function renderMovingObstacles() {
+  renderCells("moving-obstacle", movingObstacles);
+}
+
+function isInsideBoard(pos) {
+  return pos.x >= 0 && pos.x < width && pos.y >= 0 && pos.y < height;
+}
+
+function canMovingObstacleEnter(pos) {
+  return isInsideBoard(pos) && !isOccupied(pos);
+}
+
+function getRandomPosition() {
+  return {
+    x: Math.floor(Math.random() * width),
+    y: Math.floor(Math.random() * height),
+  };
+}
+
+function isNearSnakeHead(pos) {
+  const head = snake[0];
+  const distance = Math.max(Math.abs(pos.x - head.x), Math.abs(pos.y - head.y));
+  return distance <= SAFE_SPAWN_DISTANCE;
+}
+
+function spawnMovingObstacle() {
+  let pos;
+  do {
+    pos = getRandomPosition();
+  } while (isOccupied(pos) || isNearSnakeHead(pos));
+
+  const directions = [UP, DOWN, LEFT, RIGHT];
+  const direction = directions[Math.floor(Math.random() * directions.length)];
+
+  return { ...pos, direction };
+}
+
+function moveMovingObstacle(obstacle) {
+  let next = {
+    x: obstacle.x + obstacle.direction.x,
+    y: obstacle.y + obstacle.direction.y,
+  };
+
+  if (!canMovingObstacleEnter(next)) {
+    obstacle.direction = {
+      x: -obstacle.direction.x,
+      y: -obstacle.direction.y,
+    };
+    next = {
+      x: obstacle.x + obstacle.direction.x,
+      y: obstacle.y + obstacle.direction.y,
+    };
+    if (!canMovingObstacleEnter(next)) return;
+  }
+
+  obstacle.x = next.x;
+  obstacle.y = next.y;
+}
+
+function moveMovingObstacles() {
+  movingObstacles.forEach(moveMovingObstacle);
 }
 
 function getNextSnakeHead(direction) {
@@ -335,23 +410,18 @@ function moveSnake(direction) {
   }
 }
 
-function renderSnake() {
-  board.querySelectorAll(".snake").forEach((cell) => {
-    cell.classList.remove("snake");
-  });
-  snake.forEach((segment) => addClass(segment, "snake"));
-}
-
 function render() {
   renderSnake();
   renderFoods();
   renderObstacles();
+  renderMovingObstacles();
 }
 
 function isOccupied(pos) {
   return (
     snake.some((s) => s.x === pos.x && s.y === pos.y) ||
     obstacles.some((o) => o.x === pos.x && o.y === pos.y) ||
+    movingObstacles.some((o) => o.x === pos.x && o.y === pos.y) ||
     foods.some((f) => f.x === pos.x && f.y === pos.y)
   );
 }
@@ -414,6 +484,10 @@ function isGameOver() {
     .slice(1)
     .some((segment) => segment.x === head.x && segment.y === head.y);
 
+  const hitMovingObstacle = movingObstacles.some(
+    (obstacle) => obstacle.x === head.x && obstacle.y === head.y,
+  );
+
   const hitObstacle = obstacles.some(
     (obstacle) => obstacle.x === head.x && obstacle.y === head.y,
   );
@@ -424,7 +498,7 @@ function isGameOver() {
 
   const outOfHealth = hasHealth && health <= 0;
 
-  return hitWall || hitSelf || hitObstacle || outOfHealth;
+  return hitWall || hitSelf || hitObstacle || hitMovingObstacle || outOfHealth;
 }
 
 function isGameWin() {
@@ -611,6 +685,9 @@ function loadLevel(level) {
   health = config.health;
 
   hasCombo = config.hasCombo;
+
+  hasMovingObstacles = config.hasMovingObstacles;
+  numberOfMovingObstacles = config.numberOfMovingObstacles || 0;
 }
 
 function resetGame() {
@@ -626,6 +703,13 @@ function resetGame() {
   obstacles = [];
   for (let i = 0; i < obstacleCount; i++) {
     obstacles.push(spawnRandom(Infinity));
+  }
+
+  movingObstacles = [];
+  if (hasMovingObstacles) {
+    for (let i = 0; i < numberOfMovingObstacles; i++) {
+      movingObstacles.push(spawnMovingObstacle());
+    }
   }
 
   missions = pickMissions();
@@ -657,6 +741,7 @@ function startGame() {
   renderSnake();
   renderFoods();
   renderObstacles();
+  renderMovingObstacles();
 
   updateDisplays();
   scheduleTick();
@@ -683,8 +768,10 @@ function tick() {
     return;
   }
 
-  renderSnake();
+  moveMovingObstacles();
 
+  renderSnake();
+  renderMovingObstacles();
   updateMissions();
 
   if (isGameWin()) {
