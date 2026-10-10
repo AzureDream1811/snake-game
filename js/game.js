@@ -13,6 +13,7 @@ const DEFAULT_LEVEL = {
   hasTimeLimit: false,
   timeLimit: 0,
   hasHealth: false,
+  hasCombo: false,
 };
 
 const LEVELS = {
@@ -68,6 +69,7 @@ const LEVELS = {
     timeLimit: 150000,
     hasHealth: true,
     health: 3,
+    hasCombo: true,
   },
 };
 
@@ -120,7 +122,7 @@ const MISSIONS = {
 const FOOD_TYPES = {
   normal: {
     effect: () => {
-      score++;
+      score += calcFoodScore(1);
       foodEaten++;
       normal++;
     },
@@ -128,7 +130,7 @@ const FOOD_TYPES = {
   slow: {
     effect: () => {
       addEffect("slow", 5000);
-      score += 1;
+      score += calcFoodScore(1);
       foodEaten++;
       slow++;
     },
@@ -136,14 +138,14 @@ const FOOD_TYPES = {
   speed: {
     effect: () => {
       addEffect("speed", 5000);
-      score += 2;
+      score += calcFoodScore(1);
       foodEaten++;
       speed++;
     },
   },
   extraFood: {
     effect: () => {
-      score += 5;
+      score += calcFoodScore(5);
       foodEaten++;
       extraFood++;
     },
@@ -151,7 +153,7 @@ const FOOD_TYPES = {
   extraTime: {
     effect: () => {
       timeRemainingMs += 10000;
-      score++;
+      score += calcFoodScore(2);
       foodEaten++;
       extraTime++;
     },
@@ -159,7 +161,7 @@ const FOOD_TYPES = {
   poison: {
     effect: () => {
       health--;
-      score -= 3;
+      score -= calcFoodScore(2);
       foodEaten++;
       poison++;
     },
@@ -185,7 +187,8 @@ const tickCountEl = document.getElementById("tick-count");
 const effectEl = document.getElementById("effects");
 const timeEl = document.getElementById("time");
 const healthEl = document.getElementById("health");
-const comboEl = document.getElementById("combo");
+const comboMultiplierEl = document.getElementById("combo-multiplier");
+const comboDurationEl = document.getElementById("combo-duration");
 
 const snake = [];
 let cells = [];
@@ -220,7 +223,11 @@ let lastTickTime = 0;
 let timeElapsedMs = 0;
 let hasHealth = false;
 let health = 0;
+let hasCombo = false;
 let combo = 0;
+let comboEndsAt = 0;
+const COMBO_DURATION_MS = 5000;
+const MAX_COMBO = 5;
 
 let normal = 0;
 let slow = 0;
@@ -304,6 +311,16 @@ function moveSnake(direction) {
   const eatenFood = foods.find((f) => f.x === newHead.x && f.y === newHead.y);
 
   if (eatenFood) {
+    if (hasCombo) {
+      const now = Date.now();
+      if (now < comboEndsAt) {
+        combo = Math.min(combo + 1, MAX_COMBO);
+      } else {
+        combo = 1;
+      }
+      comboEndsAt = now + COMBO_DURATION_MS;
+    }
+
     FOOD_TYPES[eatenFood.type].effect();
     replaceFood(eatenFood);
     return null;
@@ -425,6 +442,57 @@ function timeRemaining(timeElapsed) {
   return Math.max(0, timeLimit - timeElapsed);
 }
 
+function pickMissions() {
+  const pool = [...missionPool];
+  const picked = [];
+  for (let i = 0; i < missionCount && pool.length > 0; i++) {
+    const index = Math.floor(Math.random() * pool.length);
+    const mission = pool.splice(index, 1)[0];
+    picked.push({
+      text: mission.text,
+      check: mission.check,
+      done: false,
+      reward: mission.reward,
+    });
+  }
+  return picked;
+}
+
+function updateMissions() {
+  missions.forEach((m) => {
+    if (!m.done && m.check()) {
+      m.done = true;
+      m.reward();
+    }
+  });
+}
+
+function addEffect(type, durationMs) {
+  effects.push({ type, endsAt: Date.now() + durationMs });
+}
+
+function hasEffect(type) {
+  return effects.some((e) => e.type === type && e.endsAt > Date.now());
+}
+
+function cleanupEffects() {
+  effects = effects.filter((e) => e.endsAt > Date.now());
+}
+
+function checkCombo() {
+  if (combo > 0 && Date.now() >= comboEndsAt) {
+    combo = 0;
+  }
+}
+
+function getComboMultiplier() {
+  return Math.max(1, combo);
+}
+
+function calcFoodScore(points) {
+  return points * getComboMultiplier();
+}
+
 function updateFoodDisplay() {
   foodEl.textContent = `Food eaten: ${foodEaten}`;
 }
@@ -480,6 +548,19 @@ function updateHealthDisplay() {
   healthEl.textContent = `Health: ${Math.max(0, health)}`;
 }
 
+function updateComboDisplay() {
+  if (!hasCombo) {
+    comboMultiplierEl.hidden = true;
+    comboDurationEl.hidden = true;
+    return;
+  }
+  comboMultiplierEl.hidden = false;
+  comboDurationEl.hidden = false;
+  comboMultiplierEl.textContent = `Combo: ${combo}`;
+  const remainingMs = Math.max(0, comboEndsAt - Date.now());
+  comboDurationEl.textContent = `Duration: ${Math.ceil(remainingMs / 1000)}s`;
+}
+
 function updateDisplays() {
   updateFoodDisplay();
   updateScoreDisplay();
@@ -489,43 +570,7 @@ function updateDisplays() {
   updateEffectDisplay();
   updateTimeDisplay();
   updateHealthDisplay();
-}
-
-function pickMissions() {
-  const pool = [...missionPool];
-  const picked = [];
-  for (let i = 0; i < missionCount && pool.length > 0; i++) {
-    const index = Math.floor(Math.random() * pool.length);
-    const mission = pool.splice(index, 1)[0];
-    picked.push({
-      text: mission.text,
-      check: mission.check,
-      done: false,
-      reward: mission.reward,
-    });
-  }
-  return picked;
-}
-
-function updateMissions() {
-  missions.forEach((m) => {
-    if (!m.done && m.check()) {
-      m.done = true;
-      m.reward();
-    }
-  });
-}
-
-function addEffect(type, durationMs) {
-  effects.push({ type, endsAt: Date.now() + durationMs });
-}
-
-function hasEffect(type) {
-  return effects.some((e) => e.type === type && e.endsAt > Date.now());
-}
-
-function cleanupEffects() {
-  effects = effects.filter((e) => e.endsAt > Date.now());
+  updateComboDisplay();
 }
 
 function scheduleTick() {
@@ -558,11 +603,14 @@ function loadLevel(level) {
 
   hasHealth = config.hasHealth;
   health = config.health;
+
+  hasCombo = config.hasCombo;
 }
 
 function resetGame() {
   snake.length = 0;
   snake.push({ x: 5, y: 5 }, { x: 4, y: 5 }, { x: 3, y: 5 });
+
   direction = RIGHT;
   score = 0;
   foodEaten = 0;
@@ -579,12 +627,16 @@ function resetGame() {
   timeRemainingMs = timeLimit;
   lastTickTime = Date.now();
   timeElapsedMs = 0;
+
   normal = 0;
   slow = 0;
   speed = 0;
   extraFood = 0;
   extraTime = 0;
   poison = 0;
+
+  combo = 0;
+  comboEndsAt = 0;
 }
 
 function startGame() {
@@ -610,6 +662,8 @@ function tick() {
   const delta = now - lastTickTime;
   lastTickTime = now;
   timeElapsedMs += delta;
+
+  checkCombo();
 
   if (hasTimeLimit) {
     timeRemainingMs -= delta;
