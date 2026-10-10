@@ -181,8 +181,7 @@ const UP = { x: 0, y: -1 };
 const DOWN = { x: 0, y: 1 };
 
 const board = document.getElementById("game-board");
-board.style.position = "relative";
-board.style.background = "black";
+
 const levelSelect = document.getElementById("level-select");
 const foodEl = document.getElementById("food");
 const scoresEl = document.getElementById("scores");
@@ -194,7 +193,9 @@ const timeEl = document.getElementById("time");
 const healthEl = document.getElementById("health");
 
 const snake = [];
+let cells = [];
 let height = 20;
+let width = 20;
 
 let foods = [];
 let direction = RIGHT;
@@ -232,6 +233,99 @@ let extraFood = 0;
 let extraTime = 0;
 let poison = 0;
 
+// draw
+function drawBoard() {
+  board.replaceChildren();
+  cells = [];
+  board.style.gridTemplateColumns = `repeat(${width}, ${CELL_SIZE}px)`;
+
+  for (let row = 0; row < height; row++) {
+    for (let col = 0; col < width; col++) {
+      const cell = document.createElement("div");
+      cell.classList.add("cell");
+      cell.style.width = `${CELL_SIZE}px`;
+      cell.style.height = `${CELL_SIZE}px`;
+      cells.push(cell);
+      board.appendChild(cell);
+    }
+  }
+}
+
+function getCell(x, y) {
+  return cells[y * width + x];
+}
+
+function addClass(pos, classname) {
+  getCell(pos.x, pos.y).classList.add(classname);
+}
+
+function removeClass(pos, classname) {
+  getCell(pos.x, pos.y).classList.remove(classname);
+}
+
+function renderSnake() {
+  snake.forEach((s) => {
+    addClass(s, "snake");
+  });
+}
+
+function renderFoods() {
+  foods.forEach((f) => {
+    showFood(f);
+  });
+}
+
+function showFood(food) {
+  getCell(food.x, food.y).style.backgroundColor = FOOD_TYPES[food.type].color;
+}
+
+function hideFood(food) {
+  getCell(food.x, food.y).style.backgroundColor = "";
+}
+
+function renderObstacles() {
+  obstacles.forEach((o) => {
+    addClass(o, "obstacle");
+  });
+}
+
+function moveSnake(direction) {
+  const head = snake[0];
+  const newHead = { x: head.x + direction.x, y: head.y + direction.y };
+
+  if (wrap) {
+    if (newHead.x < 0) newHead.x = width - 1;
+    if (newHead.x >= width) newHead.x = 0;
+    if (newHead.y < 0) newHead.y = height - 1;
+    if (newHead.y >= height) newHead.y = 0;
+  }
+
+  snake.unshift(newHead);
+
+  const eatenFood = foods.find((f) => f.x === newHead.x && f.y === newHead.y);
+
+  if (eatenFood) {
+    FOOD_TYPES[eatenFood.type].effect();
+    replaceFood(eatenFood);
+    return null;
+  }
+
+  return snake.pop();
+}
+
+function renderSnakeMove(removedTail) {
+  if (removedTail) {
+    removeClass(removedTail, "snake");
+  }
+  addClass(snake[0], "snake");
+}
+
+function render() {
+  renderSnake();
+  renderFoods();
+  renderObstacles();
+}
+
 function isOccupied(pos) {
   return (
     snake.some((s) => s.x === pos.x && s.y === pos.y) ||
@@ -253,16 +347,21 @@ function spawnRandom(durationMs) {
   const result = { x: pos.x, y: pos.y, type };
 
   if (Number.isFinite(durationMs)) {
-    setTimeout(() => {
-      const index = foods.findIndex(
-        (f) => f.x === result.x && f.y === result.y,
-      );
-      if (index !== -1) {
-        foods.splice(index, 1, spawnRandom(durationMs));
-      }
-    }, durationMs);
+    result.timeoutId = setTimeout(() => replaceFood(result), durationMs);
   }
   return result;
+}
+
+function replaceFood(oldFood) {
+  const index = foods.indexOf(oldFood);
+  if (index === -1) return;
+
+  clearTimeout(oldFood.timeoutId);
+  hideFood(oldFood);
+
+  const newFood = spawnRandom(FOOD_DURATION_MS);
+  foods[index] = newFood;
+  showFood(newFood);
 }
 
 function spawnFoods(count, durationMs) {
@@ -281,31 +380,6 @@ function pickFoodType() {
 
   const pool = specialFood;
   return pool[Math.floor(roll * pool.length)];
-}
-
-function moveSnake(direction) {
-  const head = snake[0];
-  const newHead = { x: head.x + direction.x, y: head.y + direction.y };
-
-  if (wrap) {
-    if (newHead.x < 0) newHead.x = width - 1;
-    if (newHead.x >= width) newHead.x = 0;
-    if (newHead.y < 0) newHead.y = height - 1;
-    if (newHead.y >= height) newHead.y = 0;
-  }
-
-  snake.unshift(newHead);
-
-  const eatenIndex = foods.findIndex(
-    (f) => f.x === newHead.x && f.y === newHead.y,
-  );
-
-  if (eatenIndex !== -1) {
-    FOOD_TYPES[foods[eatenIndex].type].effect();
-    foods.splice(eatenIndex, 1, spawnRandom(FOOD_DURATION_MS));
-  } else {
-    snake.pop();
-  }
 }
 
 function isGameOver() {
@@ -418,29 +492,6 @@ function updateDisplays() {
   updateHealthDisplay();
 }
 
-function createCell(x, y, color) {
-  const cell = document.createElement("div");
-  cell.style.position = "absolute";
-  cell.style.left = `${x * CELL_SIZE}px`;
-  cell.style.top = `${y * CELL_SIZE}px`;
-  cell.style.width = `${CELL_SIZE}px`;
-  cell.style.height = `${CELL_SIZE}px`;
-  cell.style.background = color;
-  return cell;
-}
-
-function draw() {
-  const fragment = document.createDocumentFragment();
-
-  obstacles.forEach((o) => fragment.appendChild(createCell(o.x, o.y, "gray")));
-  foods.forEach((f) =>
-    fragment.appendChild(createCell(f.x, f.y, FOOD_TYPES[f.type].color)),
-  );
-  snake.forEach((s) => fragment.appendChild(createCell(s.x, s.y, "green")));
-
-  board.replaceChildren(fragment);
-}
-
 function pickMissions() {
   const pool = [...missionPool];
   const picked = [];
@@ -539,9 +590,16 @@ function resetGame() {
 
 function startGame() {
   clearTimeout(timer);
+  foods.forEach((food) => clearTimeout(food.timeoutId));
+
   loadLevel(currentLevel);
+  drawBoard();
   resetGame();
-  draw();
+
+  renderSnake();
+  renderFoods();
+  renderObstacles();
+
   updateDisplays();
   scheduleTick();
 }
@@ -557,13 +615,15 @@ function tick() {
     timeRemainingMs -= delta;
   }
 
-  moveSnake(direction);
+  const removedTail = moveSnake(direction);
 
   if (isGameOver()) {
     alert("Game Over!");
     startGame();
     return;
   }
+
+  renderSnakeMove(removedTail);
 
   updateMissions();
 
@@ -572,8 +632,6 @@ function tick() {
     startGame();
     return;
   }
-
-  draw();
 
   updateDisplays();
   cleanupEffects();
