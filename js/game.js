@@ -12,9 +12,12 @@ const DEFAULT_LEVEL = {
   specialFoodTypes: [],
   hasTimeLimit: false,
   timeLimit: 0,
+  hasHealth: false,
+  hasCombo: false,
+  hasMovingObstacles: false,
 };
 
-const levels = {
+const LEVELS = {
   1: { ...DEFAULT_LEVEL, winScore: 10 },
   2: {
     ...DEFAULT_LEVEL,
@@ -22,7 +25,7 @@ const levels = {
     baseTickMs: 250,
     wrap: true,
     obstacleCount: 3,
-    missionIds: ["len8", "food5", "food8", "len12", "survive100"],
+    missionIds: ["len8", "food5", "food8", "len12", "survive300t"],
     missionCount: 3,
     showEffects: true,
   },
@@ -34,12 +37,42 @@ const levels = {
     speedSteps: [1, 1.5, 2, 3],
     winScore: 50,
     wrap: true,
-    obstacleCount: 5,
+    obstacleCount: 9,
     showEffects: true,
-    specialFoodTypes: ["slow", "speed", "extraFood", "extraTime"],
+    specialFoodTypes: ["slow", "speed", "extraFood", "extraTime", "poison"],
     foodCount: 2,
     hasTimeLimit: true,
     timeLimit: 150000,
+  },
+  4: {
+    ...DEFAULT_LEVEL,
+    gridWidth: 30,
+    gridHeight: 30,
+    baseTickMs: 200,
+    speedSteps: [1.25, 1.75, 2.25, 3.25],
+    winScore: 100,
+    wrap: true,
+    obstacleCount: 4,
+    missionIds: [
+      "len8",
+      "food5",
+      "food8",
+      "len12",
+      "survive300t",
+      "poison",
+      "survive40s",
+    ],
+    missionCount: 3,
+    showEffects: true,
+    specialFoodTypes: ["slow", "speed", "extraFood", "extraTime", "poison"],
+    foodCount: 3,
+    hasTimeLimit: true,
+    timeLimit: 60000,
+    hasHealth: true,
+    health: 3,
+    hasCombo: true,
+    hasMovingObstacles: true,
+    numberOfMovingObstacles: 2,
   },
 };
 
@@ -68,83 +101,111 @@ const MISSIONS = {
       score += 10;
     },
   },
-  survive100: {
-    text: "Survive 100 ticks",
-    check: () => tickCount >= 100,
+  survive300t: {
+    text: "Survive 300 ticks",
+    check: () => tickCount >= 300,
     reward: () => {
       score += 2;
     },
+  },
+  poison: {
+    text: "Eat 3 poison food",
+    check: () => poison >= 3,
+    reward: () => {
+      score += 15;
+    },
+  },
+  survive40s: {
+    text: "Survive for 40s",
+    check: () => timeElapsedMs >= 40000,
+    reward: () => addEffect("speed", 3000),
   },
 };
 
 const FOOD_TYPES = {
   normal: {
-    color: "red",
     effect: () => {
-      score++;
+      score += calcFoodScore(1);
       foodEaten++;
+      normal++;
     },
   },
   slow: {
-    color: "#5c00f1",
     effect: () => {
       addEffect("slow", 5000);
-      score -= 1;
+      score += calcFoodScore(1);
       foodEaten++;
+      slow++;
     },
   },
   speed: {
-    color: "#FFD23F",
     effect: () => {
       addEffect("speed", 5000);
-      score += 2;
+      score += calcFoodScore(1);
       foodEaten++;
+      speed++;
     },
   },
   extraFood: {
-    color: "#FF6B9D",
     effect: () => {
-      score += 5;
+      score += calcFoodScore(5);
       foodEaten++;
+      extraFood++;
     },
   },
   extraTime: {
-    color: "#2ECC71",
     effect: () => {
       timeRemainingMs += 10000;
+      score += calcFoodScore(2);
       foodEaten++;
+      extraTime++;
+    },
+  },
+  poison: {
+    effect: () => {
+      health--;
+      score -= calcFoodScore(2);
+      foodEaten++;
+      poison++;
     },
   },
 };
 
+const CELL_SIZE = 20;
+const FOOD_DURATION_MS = 10000;
+const SAFE_SPAWN_DISTANCE = 5;
+
+const RIGHT = { x: 1, y: 0 };
+const LEFT = { x: -1, y: 0 };
+const UP = { x: 0, y: -1 };
+const DOWN = { x: 0, y: 1 };
+
 const board = document.getElementById("game-board");
-const ctx = board.getContext("2d");
-const levelSelect = document.getElementById("level-select");
+
+const levelButtons = document.getElementById("level-buttons");
 const foodEl = document.getElementById("food");
-const scoresEL = document.getElementById("scores");
+const scoresEl = document.getElementById("scores");
 const speedEl = document.getElementById("speed-up");
 const missionsEl = document.getElementById("missions");
 const tickCountEl = document.getElementById("tick-count");
 const effectEl = document.getElementById("effects");
 const timeEl = document.getElementById("time");
-
-const cellSize = 20;
-let width = 20;
-let height = 20;
-
-const right = { x: 1, y: 0 };
-const left = { x: -1, y: 0 };
-const up = { x: 0, y: -1 };
-const down = { x: 0, y: 1 };
+const healthEl = document.getElementById("health");
+const comboMultiplierEl = document.getElementById("combo-multiplier");
+const comboDurationEl = document.getElementById("combo-duration");
 
 const snake = [];
+let cells = [];
+let height = 20;
+let width = 20;
+let currentConfig = LEVELS[1];
+
 let foods = [];
-let direction = right;
+let direction = RIGHT;
 let score = 0;
 let timer;
 let tickCount = 0;
 let foodEaten = 0;
-let foodDurationMs = 10000;
 let foodCount = 1;
 
 let currentLevel = 1;
@@ -164,11 +225,194 @@ let timeLimit = 0;
 let showEffects = false;
 let timeRemainingMs = 0;
 let lastTickTime = 0;
+let timeElapsedMs = 0;
+let hasHealth = false;
+let health = 0;
+let hasCombo = false;
+let combo = 0;
+let comboEndsAt = 0;
+const COMBO_DURATION_MS = 5000;
+const MAX_COMBO = 5;
+let hasMovingObstacles = false;
+let numberOfMovingObstacles = 0;
+let movingObstacles = [];
+
+let normal = 0;
+let slow = 0;
+let speed = 0;
+let extraFood = 0;
+let extraTime = 0;
+let poison = 0;
+
+function drawBoard() {
+  board.replaceChildren();
+  board.style.gridTemplateColumns = `repeat(${width}, ${CELL_SIZE}px)`;
+
+  cells = Array.from({ length: width }, () => []);
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const cell = document.createElement("div");
+      cell.classList.add("cell");
+      cell.style.width = `${CELL_SIZE}px`;
+      cell.style.height = `${CELL_SIZE}px`;
+      cells[x][y] = cell;
+      board.appendChild(cell);
+    }
+  }
+}
+
+function getCell(x, y) {
+  return cells[x][y];
+}
+
+function addClass(pos, classname) {
+  getCell(pos.x, pos.y).classList.add(classname);
+}
+
+function removeClass(pos, classname) {
+  getCell(pos.x, pos.y).classList.remove(classname);
+}
+
+function renderCells(classname, positions) {
+  board.querySelectorAll(`.${classname}`).forEach((cell) => {
+    cell.classList.remove(classname);
+  });
+  positions.forEach((pos) => addClass(pos, classname));
+}
+
+function renderSnake() {
+  renderCells("snake", snake);
+}
+
+function renderFoods() {
+  foods.forEach((f) => {
+    showFood(f);
+  });
+}
+
+function showFood(food) {
+  const cell = getCell(food.x, food.y);
+  cell.classList.add("food", `food-${food.type}`);
+}
+
+function hideFood(food) {
+  const cell = getCell(food.x, food.y);
+  cell.classList.remove("food", `food-${food.type}`);
+}
+
+function renderObstacles() {
+  obstacles.forEach((o) => {
+    addClass(o, "obstacle");
+  });
+}
+
+function renderMovingObstacles() {
+  renderCells("moving-obstacle", movingObstacles);
+}
+
+function isInsideBoard(pos) {
+  return pos.x >= 0 && pos.x < width && pos.y >= 0 && pos.y < height;
+}
+
+function canMovingObstacleEnter(pos) {
+  return isInsideBoard(pos) && !isOccupied(pos);
+}
+
+function getRandomPosition() {
+  return {
+    x: Math.floor(Math.random() * width),
+    y: Math.floor(Math.random() * height),
+  };
+}
+
+function isNearSnakeHead(pos) {
+  const head = snake[0];
+  const distance = Math.max(Math.abs(pos.x - head.x), Math.abs(pos.y - head.y));
+  return distance <= SAFE_SPAWN_DISTANCE;
+}
+
+function spawnMovingObstacle() {
+  let pos;
+  do {
+    pos = getRandomPosition();
+  } while (isOccupied(pos) || isNearSnakeHead(pos));
+
+  const directions = [UP, DOWN, LEFT, RIGHT];
+  const direction = directions[Math.floor(Math.random() * directions.length)];
+
+  return { ...pos, direction };
+}
+
+function moveMovingObstacle(obstacle) {
+  const next = {
+    x: obstacle.x + obstacle.direction.x,
+    y: obstacle.y + obstacle.direction.y,
+  };
+
+  if (canMovingObstacleEnter(next)) {
+    obstacle.x = next.x;
+    obstacle.y = next.y;
+  } else {
+    obstacle.direction = {
+      x: -obstacle.direction.x,
+      y: -obstacle.direction.y,
+    };
+  }
+}
+
+function getNextSnakeHead(direction) {
+  const head = snake[0];
+  const newHead = { x: head.x + direction.x, y: head.y + direction.y };
+
+  if (wrap) {
+    if (newHead.x < 0) newHead.x = width - 1;
+    if (newHead.x >= width) newHead.x = 0;
+    if (newHead.y < 0) newHead.y = height - 1;
+    if (newHead.y >= height) newHead.y = 0;
+  }
+
+  return newHead;
+}
+
+function increaseCombo() {
+  if (!hasCombo) return;
+  combo = Math.min(combo + 1, MAX_COMBO);
+  comboEndsAt = Date.now() + COMBO_DURATION_MS;
+}
+
+function eatFood(food) {
+  increaseCombo();
+  FOOD_TYPES[food.type].effect();
+  replaceFood(food);
+}
+
+function moveSnake(direction) {
+  const newHead = getNextSnakeHead(direction);
+
+  snake.unshift(newHead);
+
+  const eatenFood = foods.find((f) => f.x === newHead.x && f.y === newHead.y);
+
+  if (eatenFood) {
+    eatFood(eatenFood);
+  } else {
+    snake.pop();
+  }
+}
+
+function render() {
+  renderSnake();
+  renderFoods();
+  renderObstacles();
+  renderMovingObstacles();
+}
 
 function isOccupied(pos) {
   return (
     snake.some((s) => s.x === pos.x && s.y === pos.y) ||
     obstacles.some((o) => o.x === pos.x && o.y === pos.y) ||
+    movingObstacles.some((o) => o.x === pos.x && o.y === pos.y) ||
     foods.some((f) => f.x === pos.x && f.y === pos.y)
   );
 }
@@ -186,16 +430,21 @@ function spawnRandom(durationMs) {
   const result = { x: pos.x, y: pos.y, type };
 
   if (Number.isFinite(durationMs)) {
-    setTimeout(() => {
-      const index = foods.findIndex(
-        (f) => f.x === result.x && f.y === result.y,
-      );
-      if (index !== -1) {
-        foods.splice(index, 1, spawnRandom(durationMs));
-      }
-    }, durationMs);
+    result.timeoutId = setTimeout(() => replaceFood(result), durationMs);
   }
   return result;
+}
+
+function replaceFood(oldFood) {
+  const index = foods.indexOf(oldFood);
+  if (index === -1) return;
+
+  clearTimeout(oldFood.timeoutId);
+  hideFood(oldFood);
+
+  const newFood = spawnRandom(FOOD_DURATION_MS);
+  foods[index] = newFood;
+  showFood(newFood);
 }
 
 function spawnFoods(count, durationMs) {
@@ -207,59 +456,52 @@ function spawnFoods(count, durationMs) {
 }
 
 function pickFoodType() {
-  if (specialFood.length === 0) return "normal";
-  const roll = Math.random();
+  const pool = currentConfig.specialFoodTypes;
 
-  if (roll < 0.7) return "normal";
+  if (!pool || pool.length == 0) {
+    return "normal";
+  }
 
-  const pool = specialFood;
+  if (Math.random() < 0.7) {
+    return "normal";
+  }
+
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
-function moveSnake(direction) {
-  const head = snake[0];
-  const newHead = { x: head.x + direction.x, y: head.y + direction.y };
+function isSamePos(pos1, pos2) {
+  return pos1.x === pos2.x && pos1.y === pos2.y;
+}
 
-  if (wrap) {
-    if (newHead.x < 0) newHead.x = width - 1;
-    if (newHead.x >= width) newHead.x = 0;
-    if (newHead.y < 0) newHead.y = height - 1;
-    if (newHead.y >= height) newHead.y = 0;
-  }
+function hasHitWall(pos) {
+  return !wrap && !isInsideBoard(pos);
+}
 
-  snake.unshift(newHead);
+function hasHitSelf(pos) {
+  return snake.slice(1).some((segment) => isSamePos(segment, pos));
+}
 
-  const eatenIndex = foods.findIndex(
-    (f) => f.x === newHead.x && f.y === newHead.y,
+function hasHitObstacle(pos) {
+  return (
+    obstacles.some((obstacle) => isSamePos(obstacle, pos)) ||
+    movingObstacles.some((obstacle) => isSamePos(obstacle, pos))
   );
-
-  if (eatenIndex !== -1) {
-    FOOD_TYPES[foods[eatenIndex].type].effect();
-    foods.splice(eatenIndex, 1, spawnRandom(foodDurationMs));
-  } else {
-    snake.pop();
-  }
 }
 
 function isGameOver() {
   const head = snake[0];
 
-  const hitWall =
-    head.x < 0 || head.x >= width || head.y < 0 || head.y >= height;
+  if (hasHitWall(head) || hasHitSelf(head)) return true;
 
-  const hitSelf = snake
-    .slice(1)
-    .some((segment) => segment.x === head.x && segment.y === head.y);
-
-  const hitObstacle = obstacles.some(
-    (obstacle) => obstacle.x === head.x && obstacle.y === head.y,
-  );
-
-  if (hasTimeLimit && timeRemainingMs <= 0) {
-    return true;
+  if (hasHitObstacle(head)) {
+    if (!hasHealth) return true;
+    health--;
   }
 
-  return hitWall || hitSelf || hitObstacle;
+  if (hasTimeLimit && timeRemainingMs <= 0) return true;
+  if (hasHealth && health <= 0) return true;
+
+  return false;
 }
 
 function isGameWin() {
@@ -268,14 +510,14 @@ function isGameWin() {
 
 function getSpeed() {
   const index = Math.min(Math.floor(foodEaten / 3), speedSteps.length - 1);
-  let speed = speedSteps[index];
+  let currentSpeed = speedSteps[index];
   if (hasEffect("speed")) {
-    speed *= 1.5;
+    currentSpeed *= 1.5;
   }
   if (hasEffect("slow")) {
-    speed *= 0.5;
+    currentSpeed *= 0.5;
   }
-  return speed;
+  return currentSpeed;
 }
 
 function timeRemaining(timeElapsed) {
@@ -283,12 +525,64 @@ function timeRemaining(timeElapsed) {
   return Math.max(0, timeLimit - timeElapsed);
 }
 
+function pickMissions() {
+  const pool = [...missionPool];
+  const picked = [];
+  for (let i = 0; i < missionCount && pool.length > 0; i++) {
+    const index = Math.floor(Math.random() * pool.length);
+    const mission = pool.splice(index, 1)[0];
+    picked.push({
+      text: mission.text,
+      check: mission.check,
+      done: false,
+      reward: mission.reward,
+    });
+  }
+  return picked;
+}
+
+function updateMissions() {
+  missions.forEach((m) => {
+    if (!m.done && m.check()) {
+      m.done = true;
+      m.reward();
+    }
+  });
+}
+
+function addEffect(type, durationMs) {
+  effects.push({ type, endsAt: Date.now() + durationMs });
+}
+
+function hasEffect(type) {
+  return effects.some((e) => e.type === type && e.endsAt > Date.now());
+}
+
+function cleanupEffects() {
+  // effects.filter tạo mảng mới khi if đúng
+  effects = effects.filter((e) => e.endsAt > Date.now());
+}
+
+function checkCombo() {
+  if (combo > 0 && Date.now() >= comboEndsAt) {
+    combo = 0;
+  }
+}
+
+function getComboMultiplier() {
+  return Math.max(1, combo);
+}
+
+function calcFoodScore(points) {
+  return points * getComboMultiplier();
+}
+
 function updateFoodDisplay() {
   foodEl.textContent = `Food eaten: ${foodEaten}`;
 }
 
 function updateScoreDisplay() {
-  scoresEL.textContent = `Score: ${score}/${winScore}`;
+  scoresEl.textContent = `Score: ${score}/${winScore}`;
 }
 
 function updateSpeedDisplay() {
@@ -328,6 +622,29 @@ function updateTimeDisplay() {
   timeEl.textContent = `Remaining: ${Math.ceil(Math.max(0, timeRemainingMs) / 1000)}s`;
 }
 
+function updateHealthDisplay() {
+  if (!hasHealth) {
+    healthEl.hidden = true;
+    return;
+  }
+
+  healthEl.hidden = false;
+  healthEl.textContent = `Health: ${Math.max(0, health)}`;
+}
+
+function updateComboDisplay() {
+  if (!hasCombo) {
+    comboMultiplierEl.hidden = true;
+    comboDurationEl.hidden = true;
+    return;
+  }
+  comboMultiplierEl.hidden = false;
+  comboDurationEl.hidden = false;
+  comboMultiplierEl.textContent = `Combo: ${combo}`;
+  const remainingMs = Math.max(0, comboEndsAt - Date.now());
+  comboDurationEl.textContent = `Duration: ${Math.ceil(remainingMs / 1000)}s`;
+}
+
 function updateDisplays() {
   updateFoodDisplay();
   updateScoreDisplay();
@@ -336,82 +653,8 @@ function updateDisplays() {
   updateMissionDisplay();
   updateEffectDisplay();
   updateTimeDisplay();
-}
-
-function drawFood(ctx, foods) {
-  foods.forEach((f) => {
-    ctx.fillStyle = FOOD_TYPES[f.type].color;
-    ctx.fillRect(f.x * cellSize, f.y * cellSize, cellSize, cellSize);
-  });
-}
-
-function drawSnake(ctx) {
-  ctx.fillStyle = "green";
-  snake.forEach((segment) => {
-    ctx.fillRect(
-      segment.x * cellSize,
-      segment.y * cellSize,
-      cellSize,
-      cellSize,
-    );
-  });
-}
-
-function drawObstacles(ctx) {
-  ctx.fillStyle = "gray";
-  obstacles.forEach((obstacle) => {
-    ctx.fillRect(
-      obstacle.x * cellSize,
-      obstacle.y * cellSize,
-      cellSize,
-      cellSize,
-    );
-  });
-}
-
-function draw(ctx) {
-  ctx.fillStyle = "black";
-  ctx.fillRect(0, 0, width * cellSize, height * cellSize);
-  drawObstacles(ctx);
-  drawFood(ctx, foods);
-  drawSnake(ctx);
-}
-
-function pickMissions() {
-  const pool = [...missionPool];
-  const picked = [];
-  for (let i = 0; i < missionCount && pool.length > 0; i++) {
-    const index = Math.floor(Math.random() * pool.length);
-    const mission = pool.splice(index, 1)[0];
-    picked.push({
-      text: mission.text,
-      check: mission.check,
-      done: false,
-      reward: mission.reward,
-    });
-  }
-  return picked;
-}
-
-function updateMissions() {
-  missions.forEach((m) => {
-    if (!m.done && m.check()) {
-      m.done = true;
-      m.reward();
-    }
-  });
-}
-
-function addEffect(type, durationMs) {
-  effects.push({ type, endsAt: Date.now() + durationMs });
-}
-
-function hasEffect(type) {
-  return effects.some((e) => e.type === type && e.endsAt > Date.now());
-}
-
-function cleanupEffects() {
-  effects = effects.filter((e) => e.endsAt > Date.now());
+  updateHealthDisplay();
+  updateComboDisplay();
 }
 
 function scheduleTick() {
@@ -419,55 +662,87 @@ function scheduleTick() {
 }
 
 function loadLevel(level) {
-  const config = levels[level];
-  currentLevel = level;
+  currentConfig = LEVELS[level];
 
-  width = config.gridWidth; 
-  height = config.gridHeight;
-  board.width = width * cellSize;
-  board.height = height * cellSize;
+  width = currentConfig.gridWidth;
+  height = currentConfig.gridHeight;
 
-  winScore = config.winScore;
-  baseTickMs = config.baseTickMs;
-  speedSteps = config.speedSteps;
-  wrap = config.wrap;
-  obstacleCount = config.obstacleCount;
-  foodCount = levels[currentLevel].foodCount || 1;
+  winScore = currentConfig.winScore;
+  baseTickMs = currentConfig.baseTickMs;
+  speedSteps = currentConfig.speedSteps;
+  wrap = currentConfig.wrap;
+  obstacleCount = currentConfig.obstacleCount;
+  foodCount = currentConfig.foodCount || 1;
 
-  missionPool = config.missionIds.map((id) => MISSIONS[id]);
-  missionCount = config.missionCount;
+  missionPool = currentConfig.missionIds.map((id) => MISSIONS[id]);
+  missionCount = currentConfig.missionCount;
 
-  specialFood = config.specialFoodTypes;
-  hasTimeLimit = config.hasTimeLimit;
-  timeLimit = config.timeLimit;
-  showEffects = config.showEffects;
+  hasTimeLimit = currentConfig.hasTimeLimit;
+  timeLimit = currentConfig.timeLimit;
+  showEffects = currentConfig.showEffects;
+
+  hasHealth = currentConfig.hasHealth;
+  health = currentConfig.health;
+
+  hasCombo = currentConfig.hasCombo;
+
+  hasMovingObstacles = currentConfig.hasMovingObstacles;
+  numberOfMovingObstacles = currentConfig.numberOfMovingObstacles || 0;
 }
 
 function resetGame() {
   snake.length = 0;
   snake.push({ x: 5, y: 5 }, { x: 4, y: 5 }, { x: 3, y: 5 });
-  direction = right;
+
+  direction = RIGHT;
   score = 0;
   foodEaten = 0;
   tickCount = 0;
-  foods = spawnFoods(foodCount, foodDurationMs);
+  foods = spawnFoods(foodCount, FOOD_DURATION_MS);
 
   obstacles = [];
   for (let i = 0; i < obstacleCount; i++) {
     obstacles.push(spawnRandom(Infinity));
   }
 
+  movingObstacles = [];
+  if (hasMovingObstacles) {
+    for (let i = 0; i < numberOfMovingObstacles; i++) {
+      movingObstacles.push(spawnMovingObstacle());
+    }
+  }
+
   missions = pickMissions();
   effects = [];
   timeRemainingMs = timeLimit;
   lastTickTime = Date.now();
+  timeElapsedMs = 0;
+
+  normal = 0;
+  slow = 0;
+  speed = 0;
+  extraFood = 0;
+  extraTime = 0;
+  poison = 0;
+
+  combo = 0;
+  comboEndsAt = 0;
 }
 
 function startGame() {
   clearTimeout(timer);
+  foods.forEach((food) => clearTimeout(food.timeoutId));
+
   loadLevel(currentLevel);
+  updateLevelButtons();
+  drawBoard();
   resetGame();
-  draw(ctx);
+
+  renderSnake();
+  renderFoods();
+  renderObstacles();
+  renderMovingObstacles();
+
   updateDisplays();
   scheduleTick();
 }
@@ -477,6 +752,9 @@ function tick() {
   const now = Date.now();
   const delta = now - lastTickTime;
   lastTickTime = now;
+  timeElapsedMs += delta;
+
+  checkCombo();
 
   if (hasTimeLimit) {
     timeRemainingMs -= delta;
@@ -490,6 +768,10 @@ function tick() {
     return;
   }
 
+  movingObstacles.forEach(moveMovingObstacle);
+
+  renderSnake();
+  renderMovingObstacles();
   updateMissions();
 
   if (isGameWin()) {
@@ -498,42 +780,45 @@ function tick() {
     return;
   }
 
-  draw(ctx);
-
   updateDisplays();
   cleanupEffects();
   scheduleTick();
 }
 
 document.addEventListener("keydown", (e) => {
-  if (e.key === "ArrowUp" && direction !== down) {
-    direction = up;
+  if ((e.key === "ArrowUp" || e.key === "w") && direction !== DOWN) {
+    direction = UP;
   }
 
-  if (e.key === "ArrowDown" && direction !== up) {
-    direction = down;
+  if ((e.key === "ArrowDown" || e.key === "s") && direction !== UP) {
+    direction = DOWN;
   }
 
-  if (e.key === "ArrowLeft" && direction !== right) {
-    direction = left;
+  if ((e.key === "ArrowLeft" || e.key === "a") && direction !== RIGHT) {
+    direction = LEFT;
   }
 
-  if (e.key === "ArrowRight" && direction !== left) {
-    direction = right;
+  if ((e.key === "ArrowRight" || e.key === "d") && direction !== LEFT) {
+    direction = RIGHT;
   }
 });
 
-Object.keys(levels).forEach((key) => {
-  const option = document.createElement("option");
-  option.value = key;
-  option.textContent = `Level ${key}`;
-  levelSelect.appendChild(option);
-});
+levelButtons.addEventListener("click", (e) => {
+  const button = e.target.closest("button");
+  if (!button) return;
 
-levelSelect.addEventListener("change", () => {
-  currentLevel = Number(levelSelect.value);
-  levelSelect.blur();
+  currentLevel = Number(button.dataset.level);
+  button.blur();
   startGame();
 });
+
+function updateLevelButtons() {
+  levelButtons.querySelectorAll("button").forEach((button) => {
+    button.classList.toggle(
+      "active",
+      Number(button.dataset.level) === currentLevel,
+    );
+  });
+}
 
 startGame();
