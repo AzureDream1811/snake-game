@@ -198,7 +198,7 @@ const snake = [];
 let cells = [];
 let height = 20;
 let width = 20;
-let cunrrentConfig = LEVELS[1];
+let currentConfig = LEVELS[1];
 
 let foods = [];
 let direction = RIGHT;
@@ -244,7 +244,6 @@ let extraFood = 0;
 let extraTime = 0;
 let poison = 0;
 
-// draw
 function drawBoard() {
   board.replaceChildren();
   board.style.gridTemplateColumns = `repeat(${width}, ${CELL_SIZE}px)`;
@@ -346,25 +345,20 @@ function spawnMovingObstacle() {
 }
 
 function moveMovingObstacle(obstacle) {
-  let next = {
+  const next = {
     x: obstacle.x + obstacle.direction.x,
     y: obstacle.y + obstacle.direction.y,
   };
 
-  if (!canMovingObstacleEnter(next)) {
+  if (canMovingObstacleEnter(next)) {
+    obstacle.x = next.x;
+    obstacle.y = next.y;
+  } else {
     obstacle.direction = {
       x: -obstacle.direction.x,
       y: -obstacle.direction.y,
     };
-    next = {
-      x: obstacle.x + obstacle.direction.x,
-      y: obstacle.y + obstacle.direction.y,
-    };
-    if (!canMovingObstacleEnter(next)) return;
   }
-
-  obstacle.x = next.x;
-  obstacle.y = next.y;
 }
 
 function moveMovingObstacles() {
@@ -466,9 +460,9 @@ function spawnFoods(count, durationMs) {
 }
 
 function pickFoodType() {
-  const pool = cunrrentConfig.specialFoodTypes;
+  const pool = currentConfig.specialFoodTypes;
 
-  if (!pool || pool.length === 0) {
+  if (!pool || pool.length == 0) {
     return "normal";
   }
 
@@ -479,31 +473,39 @@ function pickFoodType() {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
+function isSamePos(pos1, pos2) {
+  return pos1.x === pos2.x && pos1.y === pos2.y;
+}
+
+function hasHitWall(pos) {
+  return !wrap && !isInsideBoard(pos);
+}
+
+function hasHitSelf(pos) {
+  return snake.slice(1).some((segment) => isSamePos(segment, pos));
+}
+
+function hasHitObstacle(pos) {
+  return (
+    obstacles.some((obstacle) => isSamePos(obstacle, pos)) ||
+    movingObstacles.some((obstacle) => isSamePos(obstacle, pos))
+  );
+}
+
 function isGameOver() {
   const head = snake[0];
 
-  const hitWall =
-    head.x < 0 || head.x >= width || head.y < 0 || head.y >= height;
+  if (hasHitWall(head) || hasHitSelf(head)) return true;
 
-  const hitSelf = snake
-    .slice(1)
-    .some((segment) => segment.x === head.x && segment.y === head.y);
-
-  const hitMovingObstacle = movingObstacles.some(
-    (obstacle) => obstacle.x === head.x && obstacle.y === head.y,
-  );
-
-  const hitObstacle = obstacles.some(
-    (obstacle) => obstacle.x === head.x && obstacle.y === head.y,
-  );
-
-  if (hasTimeLimit && timeRemainingMs <= 0) {
-    return true;
+  if (hasHitObstacle(head)) {
+    if (!hasHealth) return true;
+    health--;
   }
 
-  const outOfHealth = hasHealth && health <= 0;
+  if (hasTimeLimit && timeRemainingMs <= 0) return true;
+  if (hasHealth && health <= 0) return true;
 
-  return hitWall || hitSelf || hitObstacle || hitMovingObstacle || outOfHealth;
+  return false;
 }
 
 function isGameWin() {
@@ -663,35 +665,32 @@ function scheduleTick() {
 }
 
 function loadLevel(level) {
-  cunrrentConfig = LEVELS[level];
+  currentConfig = LEVELS[level];
 
-  width = cunrrentConfig.gridWidth;
-  height = cunrrentConfig.gridHeight;
-  board.style.width = `${width * CELL_SIZE}px`;
-  board.style.height = `${height * CELL_SIZE}px`;
+  width = currentConfig.gridWidth;
+  height = currentConfig.gridHeight;
 
-  winScore = cunrrentConfig.winScore;
-  baseTickMs = cunrrentConfig.baseTickMs;
-  speedSteps = cunrrentConfig.speedSteps;
-  wrap = cunrrentConfig.wrap;
-  obstacleCount = cunrrentConfig.obstacleCount;
-  foodCount = cunrrentConfig.foodCount || 1;
+  winScore = currentConfig.winScore;
+  baseTickMs = currentConfig.baseTickMs;
+  speedSteps = currentConfig.speedSteps;
+  wrap = currentConfig.wrap;
+  obstacleCount = currentConfig.obstacleCount;
+  foodCount = currentConfig.foodCount || 1;
 
-  missionPool = cunrrentConfig.missionIds.map((id) => MISSIONS[id]);
-  missionCount = cunrrentConfig.missionCount;
+  missionPool = currentConfig.missionIds.map((id) => MISSIONS[id]);
+  missionCount = currentConfig.missionCount;
 
-  specialFood = cunrrentConfig.specialFoodTypes;
-  hasTimeLimit = cunrrentConfig.hasTimeLimit;
-  timeLimit = cunrrentConfig.timeLimit;
-  showEffects = cunrrentConfig.showEffects;
+  hasTimeLimit = currentConfig.hasTimeLimit;
+  timeLimit = currentConfig.timeLimit;
+  showEffects = currentConfig.showEffects;
 
-  hasHealth = cunrrentConfig.hasHealth;
-  health = cunrrentConfig.health;
+  hasHealth = currentConfig.hasHealth;
+  health = currentConfig.health;
 
-  hasCombo = cunrrentConfig.hasCombo;
+  hasCombo = currentConfig.hasCombo;
 
-  hasMovingObstacles = cunrrentConfig.hasMovingObstacles;
-  numberOfMovingObstacles = cunrrentConfig.numberOfMovingObstacles || 0;
+  hasMovingObstacles = currentConfig.hasMovingObstacles;
+  numberOfMovingObstacles = currentConfig.numberOfMovingObstacles || 0;
 }
 
 function resetGame() {
