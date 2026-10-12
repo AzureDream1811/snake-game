@@ -198,6 +198,7 @@ const snake = [];
 let cells = [];
 let height = 20;
 let width = 20;
+let cunrrentConfig = LEVELS[1];
 
 let foods = [];
 let direction = RIGHT;
@@ -465,13 +466,17 @@ function spawnFoods(count, durationMs) {
 }
 
 function pickFoodType() {
-  if (specialFood.length === 0) return "normal";
-  const roll = Math.random();
+  const pool = cunrrentConfig.specialFoodTypes;
 
-  if (roll < 0.7) return "normal";
+  if (!pool || pool.length === 0) {
+    return "normal";
+  }
 
-  const pool = specialFood;
-  return pool[Math.floor(roll * pool.length)];
+  if (Math.random() < 0.7) {
+    return "normal";
+  }
+
+  return pool[Math.floor(Math.random() * pool.length)];
 }
 
 function isGameOver() {
@@ -658,36 +663,35 @@ function scheduleTick() {
 }
 
 function loadLevel(level) {
-  const config = LEVELS[level];
-  currentLevel = level;
+  cunrrentConfig = LEVELS[level];
 
-  width = config.gridWidth;
-  height = config.gridHeight;
+  width = cunrrentConfig.gridWidth;
+  height = cunrrentConfig.gridHeight;
   board.style.width = `${width * CELL_SIZE}px`;
   board.style.height = `${height * CELL_SIZE}px`;
 
-  winScore = config.winScore;
-  baseTickMs = config.baseTickMs;
-  speedSteps = config.speedSteps;
-  wrap = config.wrap;
-  obstacleCount = config.obstacleCount;
-  foodCount = config.foodCount || 1;
+  winScore = cunrrentConfig.winScore;
+  baseTickMs = cunrrentConfig.baseTickMs;
+  speedSteps = cunrrentConfig.speedSteps;
+  wrap = cunrrentConfig.wrap;
+  obstacleCount = cunrrentConfig.obstacleCount;
+  foodCount = cunrrentConfig.foodCount || 1;
 
-  missionPool = config.missionIds.map((id) => MISSIONS[id]);
-  missionCount = config.missionCount;
+  missionPool = cunrrentConfig.missionIds.map((id) => MISSIONS[id]);
+  missionCount = cunrrentConfig.missionCount;
 
-  specialFood = config.specialFoodTypes;
-  hasTimeLimit = config.hasTimeLimit;
-  timeLimit = config.timeLimit;
-  showEffects = config.showEffects;
+  specialFood = cunrrentConfig.specialFoodTypes;
+  hasTimeLimit = cunrrentConfig.hasTimeLimit;
+  timeLimit = cunrrentConfig.timeLimit;
+  showEffects = cunrrentConfig.showEffects;
 
-  hasHealth = config.hasHealth;
-  health = config.health;
+  hasHealth = cunrrentConfig.hasHealth;
+  health = cunrrentConfig.health;
 
-  hasCombo = config.hasCombo;
+  hasCombo = cunrrentConfig.hasCombo;
 
-  hasMovingObstacles = config.hasMovingObstacles;
-  numberOfMovingObstacles = config.numberOfMovingObstacles || 0;
+  hasMovingObstacles = cunrrentConfig.hasMovingObstacles;
+  numberOfMovingObstacles = cunrrentConfig.numberOfMovingObstacles || 0;
 }
 
 function resetGame() {
