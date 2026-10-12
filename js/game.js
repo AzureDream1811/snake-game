@@ -361,10 +361,6 @@ function moveMovingObstacle(obstacle) {
   }
 }
 
-function moveMovingObstacles() {
-  movingObstacles.forEach(moveMovingObstacle);
-}
-
 function getNextSnakeHead(direction) {
   const head = snake[0];
   const newHead = { x: head.x + direction.x, y: head.y + direction.y };
@@ -563,6 +559,7 @@ function hasEffect(type) {
 }
 
 function cleanupEffects() {
+  // effects.filter tạo mảng mới khi if đúng
   effects = effects.filter((e) => e.endsAt > Date.now());
 }
 
@@ -771,7 +768,7 @@ function tick() {
     return;
   }
 
-  moveMovingObstacles();
+  movingObstacles.forEach(moveMovingObstacle);
 
   renderSnake();
   renderMovingObstacles();
