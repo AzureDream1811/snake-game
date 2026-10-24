@@ -1014,6 +1014,16 @@ function tick() {
 }
 
 function handleKeydown(e) {
+  if (
+    !e.repeat &&
+    e.key >= "1" &&
+    e.key <= String(Object.keys(LEVELS).length)
+  ) {
+    currentLevel = Number(e.key);
+    startGame();
+    return;
+  }
+
   if (e.key === " ") {
     e.preventDefault();
     useShield();
