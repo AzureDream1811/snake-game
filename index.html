@@ -5,7 +5,128 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Snake-game</title>
-    <link rel="stylesheet" href="css/style.css">
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            min-height: 100vh;
+        }
+
+        #game-board {
+            display: grid;
+            background: black;
+        }
+
+        .cell {
+            position: relative;
+            box-sizing: border-box;
+        }
+
+        .snake {
+            background: green;
+            border-radius: 20%;
+        }
+
+        .food::after {
+            content: "";
+            position: absolute;
+            inset: 15%;
+            border-radius: 50%;
+            background: var(--food-color);
+        }
+
+        .food {
+            border-radius: 50%;
+            transform: scale(0.8);
+        }
+
+        .food-normal {
+            --food-color: red;
+        }
+
+        .food-slow {
+            --food-color: #5c00f1;
+        }
+
+        .food-speed {
+            --food-color: #FFD23F;
+        }
+
+        .food-extraFood {
+            --food-color: #FF6B9D;
+        }
+
+        .food-extraTime {
+            --food-color: #2ECC71;
+        }
+
+        .food-poison {
+            --food-color: #5c00f1;
+        }
+
+        .obstacle {
+            background: gray;
+        }
+
+        .moving-obstacle {
+            background: orange;
+        }
+
+        #level-buttons {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        #level-buttons button.active {
+            background: green;
+            color: white;
+        }
+
+        #hud {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px 16px;
+            margin-bottom: 12px;
+        }
+
+        #game-area {
+            display: flex;
+            gap: 16px;
+            align-items: flex-start;
+        }
+
+        #game-board {
+            display: grid;
+            background: black;
+        }
+
+        .hazard-warning {
+            background-image: repeating-linear-gradient(45deg, rgba(198, 255, 0, 0.25) 0 3px, transparent 3px 8px);
+            box-shadow: inset 0 0 0 1px rgba(198, 255, 0, 0.5);
+        }
+
+        .hazard-active {
+            background-image: repeating-linear-gradient(45deg, rgba(198, 255, 0, 0.7) 0 4px, rgba(0, 0, 0, 0.5) 4px 8px);
+            box-shadow: inset 0 0 8px #c6ff00;
+            animation: pulse 1s infinite alternate;
+        }
+
+        @keyframes pulse {
+            from {
+                filter: brightness(0.8);
+            }
+
+            to {
+                filter: brightness(1.3);
+            }
+        }
+
+        /*# sourceMappingURL=style.css.map */
+    </style>
+
 </head>
 
 <body>
@@ -39,7 +160,7 @@
             <ul id="missions"></ul>
         </aside>
     </div>
-    <script src="js/game.js"></script>
+    <script src="game.js"></script>
 </body>
 
 </html>
