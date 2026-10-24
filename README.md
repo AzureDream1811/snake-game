@@ -1,447 +1,170 @@
-# Snake Game
+# Snake Game — 6-Level Development Plan
 
-A classic Snake game built entirely with **HTML, CSS, and Vanilla JavaScript**.
+## Overview
 
-The game consists of **6 progressive levels**. Each level introduces new gameplay mechanics and gradually increases the complexity of the game.
+The game is developed across six levels. Each level introduces new gameplay mechanics while reusing the core Snake gameplay and features from previous levels.
 
-The project focuses primarily on gameplay logic, state management, collision detection, and JavaScript implementation rather than visual design.
-
-## Features
-
-* Classic Snake gameplay
-* 6 progressive levels
-* Keyboard controls
-* Score system
-* Level completion system
-* Dynamic Snake speed
-* Wrap-around movement
-* Mission system
-* Static and moving obstacles
-* Multiple food types
-* Temporary effects
-* Combo system
-* Environmental hazards
-* Timed events
-* Dynamic map transformation
-* Enemy Snake AI
-* Pathfinding
-* Game Over and restart system
-
-## Levels
-
-### Level 1 — Classic
-
-The foundation of the game.
-
-**Core mechanics:**
-
-* Snake movement
-* Keyboard controls
-* Food spawning
-* Snake growth
-* Score tracking
-* Self-collision detection
-* Dynamic Snake speed
-* Game Over
-* Level completion
-* Restart
-
-The player completes the level by reaching the required food count.
-
-Example:
-
-```text
-Target: 10 food
-Progress: 7 / 10
-```
-
-**Main focus:**
-
-* Game loop
-* Game state
-* Coordinate system
-* Canvas rendering
-* Input handling
-* Collision detection
+The main goals are:
+- Gradually increase gameplay difficulty.
+- Introduce new mechanics in each level.
+- Keep the code modular and reusable.
+- Ensure that existing levels remain functional when new features are added.
 
 ---
 
-### Level 2 — Challenge
+## Level 1 — Basic Snake
 
-Introduces gameplay objectives and map-based challenges.
+**Status:** Completed
 
-#### Wrap-around
+**Goal:** Implement the core Snake gameplay.
 
-The Snake can cross the boundaries of the game board and appear on the opposite side.
-
-```text
-Right edge  → Left edge
-Left edge   → Right edge
-Top edge    → Bottom edge
-Bottom edge → Top edge
-```
-
-#### Mission System
-
-The player receives objectives that must be completed during the level.
-
-Example:
-
-```text
-Mission
-[ ] Reach length 8
-[ ] Collect 5 food
-[ ] Score 100
-```
-
-Completing a mission provides a reward such as:
-
-* Bonus score
-* Temporary speed increase
-* Temporary gameplay effect
-* Other level-specific rewards
-
-#### Static Obstacles
-
-Static obstacles are placed on the game board.
-
-The Snake must avoid:
-
-* Its own body
-* Obstacles
-* Other collision areas defined by the level
-
-**New mechanics:** 3
-
-* Wrap-around movement
-* Mission and reward system
-* Static obstacles
+### Features
+- Basic snake movement and food collection.
+- Collision detection with walls and the snake's body.
+- Score tracking.
+- Win condition based on a target score.
+- Gradually increasing movement speed.
 
 ---
 
-### Level 3 — Special Food
+## Level 2 — Missions, Obstacles & Mana
 
-Introduces multiple food types and a more complex scoring system.
+**Status:** Completed / Mana to be implemented
 
-#### Multiple Food Types
+**Goal:** Introduce additional objectives and a resource-management mechanic.
 
-Different foods provide different effects.
+### Features
+- Wrap-around movement: the snake can pass through one edge and appear on the opposite edge.
+- Static obstacles.
+- Random missions with different objectives.
+- Rewards for completing missions.
+- **Mana system:**
+  - Introduce a mana resource.
+  - Consume mana to activate special abilities.
+  - Manage mana consumption and recovery.
+  - Display the current mana level in the game UI.
 
-Example:
-
-```text
-Normal Food
-+10 score
-+1 length
-
-Bonus Food
-+50 score
-
-Poison Food
-Decrease length
-
-Speed Food
-Increase movement speed
-```
-
-Additional food types can be added as the project evolves.
-
-#### Temporary Effects
-
-Some food applies an effect for a limited duration.
-
-Example:
-
-```text
-Speed Boost
-Duration: 5 seconds
-
-Slow
-Duration: 3 seconds
-```
-
-Effects expire automatically after their duration.
-
-#### Combo System
-
-Eating food continuously within a defined time window increases the combo multiplier.
-
-Example:
-
-```text
-Food 1 → x1
-Food 2 → x2
-Food 3 → x3
-Food 4 → x4
-```
-
-The combo resets when the player fails to maintain the required pace.
-
-**New mechanics:** 3
-
-* Multiple food types
-* Temporary effects
-* Combo system
+### Mana Design
+The exact abilities and recovery rules will be defined during implementation. Mana should provide meaningful gameplay benefits without making the level too easy.
 
 ---
 
-### Level 4 — Dynamic Arena
+## Level 3 — Special Food & Time Limit
 
-Introduces gameplay systems that change while the player is playing.
+**Status:** Completed
 
-#### Moving Obstacles
+**Goal:** Make gameplay more dynamic through food effects and time pressure.
 
-Obstacles can move automatically across the map.
-
-The player must react to their changing positions.
-
-#### Environmental Hazards
-
-Specific areas of the map can apply effects to the Snake.
-
-Examples:
-
-```text
-Slow Zone
-Danger Zone
-Damage Zone
-```
-
-The effect depends on the type of hazard.
-
-#### Timed Events
-
-Special events are triggered during gameplay.
-
-Examples:
-
-```text
-Frenzy Event
-Food spawn rate increases
-
-Speed Event
-Snake movement becomes faster
-
-Danger Event
-Obstacles move faster
-```
-
-Timed events have their own duration and state.
-
-**New mechanics:** 3
-
-* Moving obstacles
-* Environmental hazards
-* Timed events
+### Features
+- Larger game board.
+- Multiple food items spawned simultaneously.
+- Special food types:
+  - Slow: temporarily reduces movement speed.
+  - Speed: temporarily increases movement speed.
+  - Extra Food: grants additional points.
+  - Extra Time: adds time to the countdown.
+  - Poison: reduces score and applies its configured penalty.
+- Time limit of 150 seconds.
+- Win condition: reach 50 points.
 
 ---
 
-### Level 5 — Dynamic Map
+## Level 4 — Health & Combo
 
-Introduces one complex mechanic: **Dynamic Map Transformation**.
+**Status:** In progress
 
-The map changes while the game is running.
+**Goal:** Introduce health management and score multipliers.
 
-Possible changes include:
+### Features
+- Health system with 3 health points.
+- Collisions reduce health instead of immediately ending the game.
+- Game Over when health reaches zero.
+- Combo system for consecutive food pickups.
+- Combo multiplier capped at x5.
+- Combo expires after 5 seconds without extending the combo.
+- Three food items spawned simultaneously.
+- Retain special food and mission mechanics.
+- Time limit of 60 seconds.
+- Win condition: reach 100 points.
 
-* Obstacles appearing
-* Obstacles disappearing
-* Obstacles changing position
-* Paths becoming blocked
-* Paths becoming available
-* Layout changes
-
-Example:
-
-```text
-Initial
-
-┌────────────────────┐
-│                    │
-│      ████          │
-│                    │
-│        Snake       │
-│                    │
-└────────────────────┘
-```
-
-Later:
-
-```text
-Updated
-
-┌────────────────────┐
-│   ███              │
-│                    │
-│      ████          │
-│                    │
-│        Snake       │
-└────────────────────┘
-```
-
-The collision, food spawning, and movement systems must adapt to the current map state.
-
-**New mechanic:** 1 complex mechanic
-
-* Dynamic map transformation
+### Design Notes
+- Keep collision detection separate from health reduction.
+- Ensure each collision deducts health only once.
+- Ensure the snake returns to a safe position or receives temporary collision protection after taking damage.
 
 ---
 
-### Level 6 — Enemy AI
+## Level 5 — Hazards
 
-Introduces one complex mechanic: **Enemy Snake AI**.
+**Status:** Planned
 
-An AI-controlled Snake is added to the game.
+**Goal:** Introduce environmental threats that require more careful movement and planning.
 
-The enemy can:
+### Features
+- Hazard system with dangerous areas or objects on the board.
+- Hazards can move, change position, or activate according to defined rules.
+- Collision detection between the snake and hazards.
+- Hazard interactions follow the Level 4 health rules where appropriate.
+- Retain relevant mechanics from previous levels, such as special food, combo, and missions.
+- Increase difficulty through hazard placement, movement patterns, or activation timing.
 
-* Move independently
-* Detect targets
-* Select a target
-* Navigate through the map
-* Avoid obstacles
-* Interact with food
-* Interact with the player
+### Design Notes
+- Keep hazards distinct from ordinary static obstacles.
+- Prevent hazards from spawning on the snake, food, or other occupied positions.
+- Define hazard behavior and damage rules before implementation.
+- Ensure hazards cannot trap the snake in an unavoidable collision.
 
-Basic decision flow:
+---
 
-```text
-Detect target
-    ↓
-Select target
-    ↓
-Find path
-    ↓
-Move
-    ↓
-Re-evaluate
-```
+## Level 6 — Final Challenge
 
-The enemy can initially prioritize food and may later be extended to target the player's Snake.
+**Status:** Planned
 
-A grid-based pathfinding algorithm such as **Breadth-First Search (BFS)** can be used for navigation.
+**Goal:** Combine previously introduced mechanics into the most challenging level.
 
-**New mechanic:** 1 complex mechanic
+### Features
+- Combine core Snake gameplay with selected mechanics from Levels 2–5.
+- Use mana and special abilities to help the player handle difficult situations.
+- Include hazards and more demanding obstacle arrangements.
+- Retain health and combo mechanics.
+- Introduce a higher target score and a more challenging time limit.
+- Require the player to balance scoring, survival, resource usage, and movement.
 
-* Enemy Snake AI
+### Design Notes
+- Tune the difficulty so the level remains challenging but achievable.
+- Avoid introducing too many unrelated mechanics at once.
+- Define the final score target, time limit, hazard behavior, and mana abilities during implementation.
+- Test interactions between all active systems.
 
-## Level Progression
+---
 
-```text
-Level 1 — Classic
-    |
-    | + Dynamic Speed
-    | + Level Completion
-    v
-Level 2 — Challenge
-    |
-    | + Wrap-around
-    | + Mission System
-    | + Static Obstacles
-    v
-Level 3 — Special Food
-    |
-    | + Multiple Food Types
-    | + Temporary Effects
-    | + Combo System
-    v
-Level 4 — Dynamic Arena
-    |
-    | + Moving Obstacles
-    | + Environmental Hazards
-    | + Timed Events
-    v
-Level 5 — Dynamic Map
-    |
-    | + Dynamic Map Transformation
-    v
-Level 6 — Enemy AI
-    |
-    | + Enemy Snake
-    | + Pathfinding / Decision Making
-```
+## Implementation Order
 
-## Technologies
+1. Complete and test Level 1.
+2. Complete Level 2 and implement the mana system.
+3. Complete Level 3 and validate special food behavior.
+4. Implement and test Level 4 health and combo mechanics.
+5. Develop Level 5 hazards.
+6. Build Level 6 by combining and tuning existing mechanics.
+7. Run regression tests across all six levels.
 
-* HTML5
-* CSS3
-* Vanilla JavaScript
-* Canvas API
+---
 
-No frontend frameworks, game engines, backend services, or external dependencies are required.
+## General Development Guidelines
 
-## Project Structure
+- Use a shared core game loop across all levels.
+- Configure level-specific features through the `LEVELS` configuration object.
+- Enable or disable mechanics through level configuration instead of duplicating gameplay logic.
+- Separate collision detection, damage handling, scoring, and game-state management.
+- Prevent invalid spawning positions and infinite spawn loops.
+- Test interactions between mechanics, especially mana, health, combo, food effects, and hazards.
+- Ensure that changes to later levels do not break earlier levels.
 
-```text
-snake-game/
-├── index.html
-├── css/
-│   └── style.css
-├── js/
-│   ├── game.js
-│   ├── snake.js
-│   ├── food.js
-│   ├── obstacle.js
-│   ├── input.js
-│   └── level.js
-├── assets/
-│   └── ...
-└── README.md
-```
+## Completion Criteria
 
-The project structure may evolve as the game becomes more complex.
-
-## Getting Started
-
-Clone the repository:
-
-```bash
-git clone https://github.com/your-username/snake-game.git
-```
-
-Open the project directory:
-
-```bash
-cd snake-game
-```
-
-Open `index.html` in a web browser.
-
-No build tools or package installation are required.
-
-## Development Approach
-
-The game is developed incrementally, with each level being implemented and tested before introducing the mechanics of the next level.
-
-The main priorities are:
-
-1. Correct gameplay logic
-2. Reliable state management
-3. Clean and maintainable code
-4. Testable game mechanics
-5. Visual improvements
-
-The visual design is intentionally kept simple so development can focus on JavaScript and game logic.
-
-## Project Goals
-
-This project is primarily intended to practice:
-
-* JavaScript syntax and fundamentals
-* Arrays and objects
-* Functions
-* Event handling
-* Canvas API
-* Game loops
-* State management
-* Collision detection
-* Coordinate systems
-* Timers and intervals
-* Randomization
-* Dynamic game mechanics
-* Pathfinding
-* Basic game AI
-
-## License
-
-This project is created for learning and educational purposes.
+A level is considered complete when:
+- All configured mechanics work as intended.
+- Win and Game Over conditions are handled correctly.
+- UI displays the relevant gameplay information.
+- Edge cases have been tested.
+- Previously completed levels continue to work correctly.
