@@ -239,6 +239,7 @@ var healthEl = document.getElementById("health");
 var comboMultiplierEl = document.getElementById("combo-multiplier");
 var comboDurationEl = document.getElementById("combo-duration");
 var manaEl = document.getElementById("mana");
+var pauseButton = document.getElementById("pause-button");
 
 var boardCells = [];
 var boardWidth = 20;
@@ -296,6 +297,8 @@ var comboEndsAt = 0;
 var mana = 0;
 var effects = [];
 var missions = [];
+var isPaused = false;
+var pausedAt = 0;
 
 function isSamePos(pos1, pos2) {
   return pos1.x === pos2.x && pos1.y === pos2.y;
@@ -470,6 +473,7 @@ function spawnFoods(count) {
   return result;
 }
 
+// thay thức ăn cũ bằng thức ăn mới (khi bị ăn hoặc hết hạn)
 function replaceFood(oldFood) {
   const index = foods.indexOf(oldFood);
   if (index === -1) return;
@@ -547,6 +551,7 @@ function getNextSnakeHead() {
   return newHead;
 }
 
+// di chuyển rắn, ăn được thức ăn thì dài ra, không thì bỏ đuôi
 function moveSnake() {
   const newHead = getNextSnakeHead();
   snake.unshift(newHead);
@@ -593,6 +598,7 @@ function moveMovingObstacles() {
   }
 }
 
+// trả về giai đoạn của hazard: warning, active hoặc expired (tính theo tick)
 function getHazardPhase(hazard) {
   const age = tickCount - hazard.bornTick;
   if (age < HAZARD_WARNING_TICKS) return "warning";
@@ -626,6 +632,7 @@ function updateHazards() {
   }
 }
 
+// đầu rắn vào hazard thì bị nhiễm (chậm lại) và mất combo, có khiên thì bỏ qua
 function applyHazard() {
   if (hasEffect("shield")) return;
   if (!isInActiveHazard(snake[0])) return;
@@ -674,6 +681,7 @@ function addMana(amount) {
   mana = Math.min(mana + amount, MAX_MANA);
 }
 
+// dùng mana bật khiên, không đủ mana hoặc đang có khiên thì bỏ qua
 function useShield() {
   if (!hasMana || hasEffect("shield") || mana < SHIELD_COST) return;
 
@@ -702,6 +710,7 @@ function calcFoodScore(points) {
   return points * getComboMultiplier();
 }
 
+// tốc độ hiện tại: theo số thức ăn đã ăn, nhân thêm hiệu ứng speed/slow/infected
 function getSpeed() {
   const index = Math.min(Math.floor(foodEaten / 3), speedSteps.length - 1);
   let currentSpeed = speedSteps[index];
@@ -755,6 +764,7 @@ function hasHitObstacle(pos) {
   return containsPos(obstacles, pos) || containsPos(movingObstacles, pos);
 }
 
+// kiểm tra thua, lưu ý: đụng vật cản ở level có máu sẽ trừ máu ngay tại đây
 function isGameOver() {
   const head = snake[0];
 
@@ -955,11 +965,58 @@ function scheduleTick() {
   tickTimer = setTimeout(tick, baseTickMs / getSpeed());
 }
 
+function updatePauseButton() {
+  pauseButton.textContent = isPaused ? "Resume" : "Pause";
+  board.classList.toggle("paused", isPaused);
+}
+
+function pauseGame() {
+  if (isPaused) return;
+
+  isPaused = true;
+  pausedAt = Date.now();
+  clearTimeout(tickTimer);
+  for (const food of foods) {
+    clearTimeout(food.timeoutId);
+  }
+  updatePauseButton();
+}
+
+// tiếp tục: cộng thời gian đã dừng vào combo/hiệu ứng để không bị mất, rồi chạy lại
+function resumeGame() {
+  if (!isPaused) return;
+
+  const pausedMs = Date.now() - pausedAt;
+  isPaused = false;
+  lastTickTime = Date.now();
+  comboEndsAt += pausedMs;
+  for (const effect of effects) {
+    effect.endsAt += pausedMs;
+  }
+  for (const food of foods) {
+    food.timeoutId = setTimeout(function () {
+      replaceFood(food);
+    }, FOOD_DURATION_MS);
+  }
+  updatePauseButton();
+  scheduleTick();
+}
+
+function togglePause() {
+  if (isPaused) {
+    resumeGame();
+  } else {
+    pauseGame();
+  }
+}
+
 function startGame() {
   clearTimeout(tickTimer);
   for (const food of foods) {
     clearTimeout(food.timeoutId);
   }
+  isPaused = false;
+  updatePauseButton();
 
   loadLevel(currentLevel);
   updateLevelButtons();
@@ -971,6 +1028,7 @@ function startGame() {
   scheduleTick();
 }
 
+// 1 bước của game: cập nhật thời gian, di chuyển, kiểm tra thua/thắng, vẽ lại
 function tick() {
   tickCount++;
 
@@ -1024,10 +1082,17 @@ function handleKeydown(e) {
     return;
   }
 
+  if (e.key === "p" || e.key === "P" || e.key === "Escape") {
+    togglePause();
+    return;
+  }
+
   if (e.key === " ") {
     e.preventDefault();
-    useShield();
+    if (!isPaused) useShield();
   }
+
+  if (isPaused) return;
 
   if ((e.key === "ArrowUp" || e.key === "w") && snakeDirection !== DOWN) {
     snakeDirection = UP;
@@ -1055,7 +1120,13 @@ function handleLevelClick(e) {
   startGame();
 }
 
+function handlePauseClick() {
+  togglePause();
+  pauseButton.blur();
+}
+
 document.addEventListener("keydown", handleKeydown);
+pauseButton.addEventListener("click", handlePauseClick);
 levelButtons.addEventListener("click", handleLevelClick);
 
 startGame();
