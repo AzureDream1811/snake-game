@@ -639,7 +639,16 @@ function isEffectActive(effect) {
 }
 
 function addEffect(type, durationMs) {
-  effects.push({ type, endsAt: Date.now() + durationMs });
+  const endsAt = Date.now() + durationMs;
+
+  for (const effect of effects) {
+    if (effect.type === type && isEffectActive(effect)) {
+      effect.endsAt = Math.max(effect.endsAt, endsAt);
+      return;
+    }
+  }
+
+  effects.push({ type, endsAt });
 }
 
 function hasEffect(type) {
