@@ -29,6 +29,21 @@
             border-radius: 20%;
         }
 
+        .snake-shield {
+            animation: rainbow 1s linear infinite;
+            box-shadow: 0 0 8px 2px rgba(255, 255, 255, 0.8);
+        }
+
+        @keyframes rainbow {
+            from {
+                filter: hue-rotate(0deg) brightness(1.4);
+            }
+
+            to {
+                filter: hue-rotate(360deg) brightness(1.4);
+            }
+        }
+
         .food::after {
             content: "";
             position: absolute;

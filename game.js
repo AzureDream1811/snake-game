@@ -391,6 +391,14 @@ function hideFood(food) {
 
 function renderSnake() {
   renderCells("snake", snake);
+
+  const shielded = hasEffect("shield");
+  renderCells("snake-shield", shielded ? snake : []);
+  if (!shielded) return;
+
+  for (let i = 0; i < snake.length; i++) {
+    getCell(snake[i]).style.animationDelay = `${-i * 0.08}s`;
+  }
 }
 
 function renderFoods() {
