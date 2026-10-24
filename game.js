@@ -18,6 +18,7 @@ const DEFAULT_LEVEL = {
   hasHazards: false,
   maxHazards: 0,
   hazardSpawnEveryTicks: 0,
+  hasMana: false,
 };
 
 const LEVELS = {
@@ -83,6 +84,7 @@ const LEVELS = {
     hasHazards: true,
     maxHazards: 3,
     hazardSpawnEveryTicks: 30,
+    hasMana: true,
   },
 };
 
@@ -212,6 +214,12 @@ const HAZARD_SAFE_DISTANCE = 3;
 const HAZARD_WARNING_TICKS = 10;
 const HAZARD_ACTIVE_TICKS = 60;
 const INFECTED_DURATION_MS = 3000;
+const MAX_MANA = 100;
+const START_MANA = 50;
+const MANA_PER_FOOD = 10;
+const MANA_REGEN_PER_TICK = 0.25;
+const SHIELD_COST = 50;
+const SHIELD_DURATION_MS = 3000;
 
 const RIGHT = { x: 1, y: 0 };
 const LEFT = { x: -1, y: 0 };
@@ -230,6 +238,7 @@ var timeEl = document.getElementById("time");
 var healthEl = document.getElementById("health");
 var comboMultiplierEl = document.getElementById("combo-multiplier");
 var comboDurationEl = document.getElementById("combo-duration");
+var manaEl = document.getElementById("mana");
 
 var boardCells = [];
 var boardWidth = 20;
@@ -256,6 +265,7 @@ var numberOfMovingObstacles = 0;
 var hasHazards = false;
 var maxHazards = 0;
 var hazardSpawnEveryTicks = 0;
+var hasMana = false;
 
 var tickTimer = null;
 var tickCount = 0;
@@ -283,6 +293,7 @@ var eatenCount = {
 var health = 0;
 var combo = 0;
 var comboEndsAt = 0;
+var mana = 0;
 var effects = [];
 var missions = [];
 
@@ -542,6 +553,7 @@ function moveSnake() {
 
 function eatFood(food) {
   increaseCombo();
+  addMana(MANA_PER_FOOD);
   FOOD_TYPES[food.type].effect();
   replaceFood(food);
 }
@@ -607,6 +619,7 @@ function updateHazards() {
 }
 
 function applyHazard() {
+  if (hasEffect("shield")) return;
   if (!isInActiveHazard(snake[0])) return;
 
   addEffect("infected", INFECTED_DURATION_MS);
@@ -636,6 +649,19 @@ function cleanupEffects() {
     }
   }
   effects = activeEffects;
+}
+
+function addMana(amount) {
+  if (!hasMana) return;
+
+  mana = Math.min(mana + amount, MAX_MANA);
+}
+
+function useShield() {
+  if (!hasMana || hasEffect("shield") || mana < SHIELD_COST) return;
+
+  mana -= SHIELD_COST;
+  addEffect("shield", SHIELD_DURATION_MS);
 }
 
 function increaseCombo() {
@@ -717,7 +743,7 @@ function isGameOver() {
 
   if (hasHitWall(head) || hasHitSelf(head)) return true;
 
-  if (hasHitObstacle(head)) {
+  if (hasHitObstacle(head) && !hasEffect("shield")) {
     if (!hasHealth) return true;
     health--;
   }
@@ -795,6 +821,13 @@ function updateComboDisplay() {
   comboDurationEl.textContent = `Duration: ${Math.ceil(remainingMs / 1000)}s`;
 }
 
+function updateManaDisplay() {
+  manaEl.hidden = !hasMana;
+  if (!hasMana) return;
+
+  manaEl.textContent = `Mana: ${Math.floor(mana)}/${MAX_MANA}`;
+}
+
 function updateLevelButtons() {
   const buttons = levelButtons.querySelectorAll("button");
   for (const button of buttons) {
@@ -813,6 +846,7 @@ function updateDisplays() {
   updateTimeDisplay();
   updateHealthDisplay();
   updateComboDisplay();
+  updateManaDisplay();
 }
 
 function loadLevel(level) {
@@ -849,6 +883,8 @@ function loadLevel(level) {
   hasHazards = currentConfig.hasHazards;
   maxHazards = currentConfig.maxHazards;
   hazardSpawnEveryTicks = currentConfig.hazardSpawnEveryTicks;
+
+  hasMana = currentConfig.hasMana;
 }
 
 function resetGame() {
@@ -876,6 +912,7 @@ function resetGame() {
   };
   combo = 0;
   comboEndsAt = 0;
+  mana = hasMana ? START_MANA : 0;
   effects = [];
 
   foods = [];
@@ -929,6 +966,7 @@ function tick() {
   }
 
   checkCombo();
+  addMana(MANA_REGEN_PER_TICK);
 
   moveSnake();
   applyHazard();
@@ -959,6 +997,11 @@ function tick() {
 }
 
 function handleKeydown(e) {
+  if (e.key === " ") {
+    e.preventDefault();
+    useShield();
+  }
+
   if ((e.key === "ArrowUp" || e.key === "w") && snakeDirection !== DOWN) {
     snakeDirection = UP;
   }
